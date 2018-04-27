@@ -1,100 +1,107 @@
+#pragma once
 #ifndef PROFESSION_H
 #define PROFESSION_H
 
+#include "string_id.h"
+
 #include <string>
 #include <vector>
-#include <map>
-#include "pldata.h"
-#include "addiction.h"
-#include "skill.h"
-#include "json.h"
+#include <set>
+#include <list>
 
+template<typename T>
+class generic_factory;
 class profession;
+using Group_tag = std::string;
+class item;
+using itype_id = std::string;
 class player;
+class JsonArray;
+class JsonObject;
+class addiction;
+struct mutation_branch;
+using trait_id = string_id<mutation_branch>;
+struct bionic_data;
+using bionic_id = string_id<bionic_data>;
+enum add_type : int;
 
-typedef std::map<std::string, profession> profmap;
+class Skill;
+using skill_id = string_id<Skill>;
 
 class profession
 {
     public:
-        typedef std::pair<std::string, int> StartingSkill;
+        typedef std::pair<skill_id, int> StartingSkill;
         typedef std::vector<StartingSkill> StartingSkillList;
         struct itypedec {
             std::string type_id;
             /** Snippet id, @see snippet_library. */
             std::string snippet_id;
             // compatible with when this was just a std::string
-            itypedec(const char *t) : type_id( t ), snippet_id()
-            {
+            itypedec( const char *t ) : type_id( t ), snippet_id() {
             }
-            itypedec(const std::string &t, const std::string &d) : type_id( t ), snippet_id( d )
-            {
+            itypedec( const std::string &t, const std::string &d ) : type_id( t ), snippet_id( d ) {
             }
         };
         typedef std::vector<itypedec> itypedecvec;
+        friend class string_id<profession>;
+        friend class generic_factory<profession>;
+
     private:
-        std::string _ident;
+        string_id<profession> id;
+        bool was_loaded = false;
+
         std::string _name_male;
         std::string _name_female;
         std::string _description_male;
         std::string _description_female;
-        std::string _gender_req;
         signed int _point_cost;
-        itypedecvec _starting_items;
-        itypedecvec _starting_items_male;
-        itypedecvec _starting_items_female;
+
+        // TODO: In professions.json, replace lists of itypes (legacy) with item groups
+        itypedecvec legacy_starting_items;
+        itypedecvec legacy_starting_items_male;
+        itypedecvec legacy_starting_items_female;
+        Group_tag _starting_items = "EMPTY_GROUP";
+        Group_tag _starting_items_male = "EMPTY_GROUP";
+        Group_tag _starting_items_female = "EMPTY_GROUP";
+        itype_id no_bonus; // See profession::items and class json_item_substitution in profession.cpp
+
         std::vector<addiction> _starting_addictions;
-        std::vector<std::string> _starting_CBMs;
-        std::vector<std::string> _starting_traits;
+        std::vector<bionic_id> _starting_CBMs;
+        std::vector<trait_id> _starting_traits;
         std::set<std::string> flags; // flags for some special properties of the profession
         StartingSkillList  _starting_skills;
 
-        void add_items_from_jsonarray(JsonArray jsarr, std::string gender);
-        void add_item(const itypedec &entry, const std::string &gender);
-        void add_addiction(add_type, int);
-        void add_CBM(std::string CBM);
-        void add_trait(std::string trait);
-        // Starting skills will boost the players level in those skills by a
-        // given amount.
-        void add_skill(const std::string &skill_name, const int level);
+        void check_item_definitions( const itypedecvec &items ) const;
 
-        void check_item_definitions(const itypedecvec &items) const;
+        void load( JsonObject &jo, const std::string &src );
 
-        static profmap _all_profs;
     public:
         //these three aren't meant for external use, but had to be made public regardless
         profession();
-        profession(std::string ident, std::string name, std::string description, signed int points);
 
-        static void load_profession(JsonObject &jsobj);
+        static void load_profession( JsonObject &obj, const std::string &src );
+        static void load_item_substitutions( JsonObject &jo );
 
         // these should be the only ways used to get at professions
-        static profession *prof(std::string ident);
-        static profession *generic(); // points to the generic, default profession
-        // return a random profession, weighted for use w/ random character creation or npcs
-        static profession *weighted_random();
-        static bool exists(std::string ident);
-        static profmap::const_iterator begin();
-        static profmap::const_iterator end();
-        static int count();
+        static const profession *generic(); // points to the generic, default profession
+        static const std::vector<profession> &get_all();
 
         static bool has_initialized();
-        // clear profession map, every profession pointer becames invalid!
+        // clear profession map, every profession pointer becomes invalid!
         static void reset();
         /** calls @ref check_definition for each profession */
         static void check_definitions();
         /** Check that item/CBM/addiction/skill definitions are valid. */
         void check_definition() const;
 
-        std::string ident() const;
-        std::string gender_appropriate_name(bool male) const;
-        std::string description(bool male) const;
-        std::string gender_req() const;
+        const string_id<profession> &ident() const;
+        std::string gender_appropriate_name( bool male ) const;
+        std::string description( bool male ) const;
         signed int point_cost() const;
-        itypedecvec items(bool male) const;
+        std::list<item> items( bool male, const std::vector<trait_id> &traits ) const;
         std::vector<addiction> addictions() const;
-        std::vector<std::string> CBMs() const;
-        std::vector<std::string> traits() const;
+        std::vector<bionic_id> CBMs() const;
         const StartingSkillList skills() const;
 
         /**
@@ -102,7 +109,7 @@ class profession
          *
          * Current flags: none
          */
-        bool has_flag(std::string flag) const;
+        bool has_flag( std::string flag ) const;
 
         /**
          * Check if the given player can pick this job with the given amount
@@ -110,8 +117,9 @@ class profession
          *
          * @return true, if player can pick profession. Otherwise - false.
          */
-        bool can_pick(player *u, int points) const;
-
+        bool can_pick( const player &u, int points ) const;
+        bool is_locked_trait( const trait_id &trait ) const;
+        std::vector<trait_id> get_locked_traits() const;
 };
 
 #endif

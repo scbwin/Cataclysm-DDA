@@ -1,215 +1,169 @@
+#pragma once
 #ifndef OVERMAP_H
 #define OVERMAP_H
 
-#include "enums.h"
-#include "string.h"
 #include "omdata.h"
+#include "overmap_types.h"
 #include "mapdata.h"
-#include "mongroup.h"
-#include "output.h"
-#include "debug.h"
-#include "cursesdef.h"
-#include "name.h"
-#include "input.h"
-#include "json.h"
-#include <vector>
-#include <iosfwd>
-#include <string>
-#include <stdlib.h>
+#include "weighted_list.h"
+#include "game_constants.h"
+#include "monster.h"
+#include "weather_gen.h"
+
 #include <array>
+#include <algorithm>
+#include <iosfwd>
+#include <list>
+#include <map>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <functional>
+#include <memory>
 
-class overmapbuffer;
+class input_context;
+class JsonObject;
 class npc;
+class overmapbuffer;
+class overmap_connection;
+namespace catacurses
+{
+class window;
+} // namespace catacurses
+struct mongroup;
 
-#define OVERMAP_DEPTH 10
-#define OVERMAP_HEIGHT 10
-#define OVERMAP_LAYERS (1 + OVERMAP_DEPTH + OVERMAP_HEIGHT)
+namespace pf
+{
+    struct path;
+}
 
-// base oters: exactly what's defined in json before things are split up into blah_east or roadtype_ns, etc
-extern std::unordered_map<std::string, oter_t> obasetermap;
-
-// Likelihood to pick a specific overmap terrain.
-struct oter_weight {
-    std::string ot_sid;
-    int ot_iid;
-    int weight;
-};
-
-// Local class for picking overmap terrain from a weighted list.
-struct oter_weight_list {
-    oter_weight_list() : total_weight(0) { };
-
-    void add_item(std::string id, int weight) {
-        oter_weight new_weight = { id, -1, weight };
-        items.push_back(new_weight);
-        total_weight += weight;
-    }
-
-    void setup() { // populate iid's for faster generation and sanity check.
-        for(std::vector<oter_weight>::iterator item_it = items.begin();
-            item_it != items.end(); ++item_it ) {
-            if ( item_it->ot_iid == -1 ) {
-                std::unordered_map<std::string, oter_t>::const_iterator it = obasetermap.find(item_it->ot_sid);
-                if ( it == obasetermap.end() ) {
-                    debugmsg("Bad oter_weight_list entry in region settings: overmap_terrain '%s' not found.", item_it->ot_sid.c_str() );
-                    item_it->ot_iid = 0;
-                } else {
-                    item_it->ot_iid = it->second.loadid;
-                }
-            }
-        }
-    }
-
-    size_t pick_ent() {
-        int picked = rng(0, total_weight);
-        int accumulated_weight = 0;
-        size_t i;
-        for(i=0; i<items.size(); i++) {
-            accumulated_weight += items[i].weight;
-            if(accumulated_weight >= picked) {
-                break;
-            }
-        }
-        return i;
-    }
-
-    std::string pickstr() {
-        return items[ pick_ent() ].ot_sid;
-    }
-
-    int pick() {
-        return items[ pick_ent() ].ot_iid;
-    }
-
-private:
-    int total_weight;
-    std::vector<oter_weight> items;
-};
-
-
-
-enum city_gen_type {
-   CITY_GEN_RADIAL, // default/small/oldschol; shops constitute core, then parks, then residential
-   CITY_GEN_INVALID, // reserved; big multi-overmap cities will have a more complex zoning pattern
+class building_bin {
+    private:
+        bool finalized = false;
+        weighted_int_list<overmap_special_id> buildings;
+        std::map<overmap_special_id, int> unfinalized_buildings;
+    public:
+        building_bin() {};
+        void add( const overmap_special_id &building, int weight );
+        overmap_special_id pick() const;
+        void clear();
+        void finalize();
 };
 
 struct city_settings {
-   city_gen_type zoning_type;
-   int shop_radius; // this is not a cut and dry % but rather an inverse voodoo number; rng(0,99) > VOODOO * distance / citysize;
-   int park_radius; // in theory, adjusting these can make a town with a few shops and alot of parks + houses......by increasing shop_radius
-   oter_weight_list shops;
-   oter_weight_list parks;
-   city_settings() : zoning_type(CITY_GEN_RADIAL), shop_radius(80), park_radius(130) { }
-};
-/*
-todo: add relevent vars to regional_settings struct
-#define STREETCHANCE 2
-#define NUM_FOREST 250
-#define TOP_HIWAY_DIST 999
-#define MIN_ANT_SIZE 8
-#define MAX_ANT_SIZE 20
-#define MIN_GOO_SIZE 1
-#define MAX_GOO_SIZE 2
-#define MIN_RIFT_SIZE 6
-#define MAX_RIFT_SIZE 16
-#define SETTLE_DICE 2
-#define SETTLE_SIDES 2
-#define HIVECHANCE 180 //Chance that any given forest will be a hive
-*/
-/*
-      "plant_coverage": {                   "//": "biome settings for builtin field mapgen",
-          "percent_coverage": 0.833,        "//": "% of tiles that have a plant: one_in(120)",
-          "default": "t_shrub",             "//": "default plant",
-          "other": {
-              "t_shrub_blueberry": 0.25,
-              "t_shrub_strawberry": 0.25,
-              "f_mutpoppy": 0.1
-          },                                "//": "% of plants that aren't default",
-          "boost_chance": 0.833,            "//": "% of fields with a boosted chance for plants",
-          "boosted_percent_coverage": 2.5,  "//": "for the above: % of tiles that have a plant",
-          "boosted_other_multiplier": 100,  "//": "for the above: multiplier for 'other' percentages"
-      },
+    int shop_radius = 80;  // this is not a cut and dry % but rather an inverse voodoo number; rng(0,99) > VOODOO * distance / citysize;
+    int park_radius = 130; // in theory, adjusting these can make a town with a few shops and a lot of parks + houses......by increasing shop_radius
+    building_bin houses;
+    building_bin shops;
+    building_bin parks;
 
-*/
+    overmap_special_id pick_house() const {
+        return houses.pick()->id;
+    }
+
+    overmap_special_id pick_shop() const {
+        return shops.pick()->id;
+    }
+
+    overmap_special_id pick_park() const {
+        return parks.pick()->id;
+    }
+
+    void finalize();
+};
+
+struct ter_furn_id {
+    ter_id ter;
+    furn_id furn;
+    ter_furn_id();
+};
 
 /*
  * template for random bushes and such.
  * supports occasional boost to a single ter/furn type (clustered blueberry bushes for example)
  * json: double percentages (region statistics)and str ids, runtime int % * 1mil and int ids
  */
-struct groundcover_extra { // todo; make into something more generic for other stuff (maybe)
-   int mpercent_coverage; // % coverage where this is applied (*10000)
-   std::string default_ter_str;
-   int default_ter;
-   std::map<std::string, double> percent_str;
-   std::map<std::string, double> boosted_percent_str;
-   std::map<int, ter_furn_id> weightlist;
-   std::map<int, ter_furn_id> boosted_weightlist;
-   int boost_chance;
-   int boosted_mpercent_coverage;
-   int boosted_other_mpercent;
-   ter_furn_id pick( bool boosted = false ) const;
-   void setup();
-   groundcover_extra() : mpercent_coverage(0), default_ter_str(""), default_ter(0), boost_chance(0), boosted_mpercent_coverage(0), boosted_other_mpercent(1.0) {};
+struct groundcover_extra {
+    // TODO: make into something more generic for other stuff (maybe)
+    std::string                   default_ter_str;
+    std::map<std::string, double> percent_str;
+    std::map<std::string, double> boosted_percent_str;
+    std::map<int, ter_furn_id>    weightlist;
+    std::map<int, ter_furn_id>    boosted_weightlist;
+    ter_id default_ter               = t_null;
+    int mpercent_coverage         = 0; // % coverage where this is applied (*10000)
+    int boost_chance              = 0;
+    int boosted_mpercent_coverage = 0;
+    int boosted_other_mpercent    = 1;
+
+    ter_furn_id pick( bool boosted = false ) const;
+    void finalize();
+    groundcover_extra() = default;
 };
 
+struct map_extras {
+    unsigned int chance;
+    weighted_int_list<std::string> values;
+
+    map_extras() : chance( 0 ), values() {}
+    map_extras( const unsigned int embellished ) : chance( embellished ), values() {}
+};
+
+struct sid_or_sid;
 /*
- * Spationally relevent overmap and mapgen variables grouped into a set of suggested defaults;
+ * Spationally relevant overmap and mapgen variables grouped into a set of suggested defaults;
  * eventually region mapping will modify as required and allow for transitions of biomes / demographics in a smoooth fashion
  */
-class regional_settings {
-  public:
-   std::string id;            //
-   std::string default_oter;  // 'field'
-   id_or_id default_groundcover; // ie, 'grass_or_dirt'
-   sid_or_sid * default_groundcover_str;
-   int num_forests;           // amount of forest groupings per overmap
-   int forest_size_min;       // size range of a forest group
-   int forest_size_max;       // size range of a forest group
-   int house_basement_chance; // (one in) Varies by region due to watertable
-   int swamp_maxsize;         // SWAMPINESS: Affects the size of a swamp
-   int swamp_river_influence; // voodoo number limiting spread of river through swamp
-   int swamp_spread_chance;   // SWAMPCHANCE: (one in, every forest*forest size) chance of swamp extending past forest
-   city_settings city_spec;   // put what where in a city of what kind
-   groundcover_extra field_coverage;
-   groundcover_extra forest_coverage;
-   regional_settings() :
-       id("null"),
-       default_oter("field"),
-       default_groundcover(0,0,0),
-       default_groundcover_str(NULL),
-       num_forests(250),
-       forest_size_min(15),
-       forest_size_max(40),
-       house_basement_chance(2),
-       swamp_maxsize(4),          // SWAMPINESS // Affects the size of a swamp
-       swamp_river_influence(5),  //
-       swamp_spread_chance(8500)  // SWAMPCHANCE // Chance that a swamp will spawn instead of forest
-   {
-       //default_groundcover_str = new sid_or_sid("t_grass", 4, "t_dirt");
-   };
-   void setup();
+struct regional_settings {
+    std::string id;           //
+    oter_str_id default_oter; // 'field'
+
+    weighted_int_list<ter_id> default_groundcover; // ie, 'grass_or_dirt'
+    std::shared_ptr<weighted_int_list<ter_str_id>> default_groundcover_str;
+
+    int num_forests           = 250;  // amount of forest groupings per overmap
+    int forest_size_min       = 15;   // size range of a forest group
+    int forest_size_max       = 40;   // size range of a forest group
+    int house_basement_chance = 2;    // (one in) Varies by region due to watertable
+    int swamp_maxsize         = 4;    // SWAMPINESS: Affects the size of a swamp
+    int swamp_river_influence = 5;    // voodoo number limiting spread of river through swamp
+    int swamp_spread_chance   = 8500; // SWAMPCHANCE: (one in, every forest*forest size) chance of swamp extending past forest
+
+    city_settings     city_spec;      // put what where in a city of what kind
+    groundcover_extra field_coverage;
+    groundcover_extra forest_coverage;
+
+    weather_generator weather;
+
+    std::unordered_map<std::string, map_extras> region_extras;
+
+    regional_settings() : id("null"), default_oter("field")
+    {
+        default_groundcover.add( t_null, 0 );
+    }
+    void finalize();
 };
 
 
 struct city {
- int x;
- int y;
- int s;
- std::string name;
- city(int X = -1, int Y = -1, int S = -1) : x (X), y (Y), s (S)
- {
-     name = Name::get(nameIsTownName);
- }
+    // in overmap terrain coordinates
+    int x;
+    int y;
+    int s;
+    std::string name;
+    city(int X = -1, int Y = -1, int S = -1);
+
+    operator bool() const {
+        return s >= 0;
+    }
+
+    int get_distance_from( const tripoint &p ) const;
 };
 
 struct om_note {
- int x;
- int y;
- int num;
- std::string text;
- om_note(int X = -1, int Y = -1, int N = -1, std::string T = "") :
-         x (X), y (Y), num (N), text (T) {}
+    std::string text;
+    int         x;
+    int         y;
 };
 
 struct om_vehicle {
@@ -223,10 +177,13 @@ enum radio_type {
     WEATHER_RADIO
 };
 
+extern std::map<enum radio_type, std::string> radio_type_names;
+
 #define RADIO_MIN_STRENGTH 80
 #define RADIO_MAX_STRENGTH 200
 
 struct radio_tower {
+ // local (to the containing overmap) submap coordinates
  int x;
  int y;
  int strength;
@@ -245,26 +202,65 @@ struct map_layer {
     std::vector<om_note> notes;
 };
 
-struct node
-{
- int x;
- int y;
- int d;
- int p;
+// Wrapper around an overmap special to track progress of placing specials.
+struct overmap_special_placement {
+    int instances_placed;
+    const overmap_special *special_details;
+};
 
- node(int xp, int yp, int dir, int pri) {x = xp; y = yp; d = dir; p = pri;}
- bool operator< (const node &n) const { return this->p > n.p; }
+// A batch of overmap specials to place.
+class overmap_special_batch
+{
+public:
+    overmap_special_batch( const point &origin ) : origin_overmap( origin ) {}
+    overmap_special_batch( const point &origin, const std::vector<const overmap_special *> &specials ) :
+            origin_overmap( origin ) {
+        std::transform( specials.begin(), specials.end(), std::back_inserter( placements ), []( const overmap_special *elem ) {
+            return overmap_special_placement{ 0, elem };
+        } );
+    }
+
+    // Wrapper methods that make overmap_special_batch act like
+    // the underlying vector of overmap placements.
+    std::vector<overmap_special_placement>::iterator begin() {
+        return placements.begin();
+    }
+    std::vector<overmap_special_placement>::iterator end() {
+        return placements.end();
+    }
+    std::vector<overmap_special_placement>::iterator erase( std::vector<overmap_special_placement>::iterator pos ) {
+        return placements.erase( pos );
+    }
+    bool empty() {
+        return placements.empty();
+    }
+
+    point get_origin() const {
+        return origin_overmap;
+    }
+
+private:
+    std::vector<overmap_special_placement> placements;
+    point origin_overmap;
 };
 
 class overmap
 {
  public:
-    overmap(const overmap&) = default;
-    overmap(overmap &&) = default;
-    overmap(int x, int y);
+    overmap( const overmap& ) = default;
+    overmap( overmap && ) = default;
+    overmap( int x, int y );
+    // Argument-less constructor bypasses trying to load matching file, only used for unit testing.
+    overmap();
     ~overmap();
 
     overmap& operator=(overmap const&) = default;
+
+    /**
+     * Create content in the overmap.
+     **/
+    void populate( overmap_special_batch &enabled_specials );
+    void populate();
 
     point const& pos() const { return loc; }
 
@@ -276,11 +272,6 @@ class overmap
      * Returns @ref invalid_tripoint if no suitable place has been found.
      */
     tripoint find_random_omt( const std::string &omt_base_type ) const;
-
-    void process_mongroups(); // Makes them die out, maybe more
-    void move_hordes();
-    void signal_hordes( const int x, const int y, const int sig_power);
-
     /**
      * Return a vector containing the absolute coordinates of
      * every matching terrain on the current z level of the current overmap.
@@ -288,23 +279,36 @@ class overmap
      * coordinates), or empty vector if no matching terrain is found.
      */
     std::vector<point> find_terrain(const std::string &term, int zlevel);
-    int closest_city(point p);
-    point random_house_in_city(int city_id);
-    int dist_from_city(point p);
 
     oter_id& ter(const int x, const int y, const int z);
+    oter_id& ter( const tripoint &p );
     const oter_id get_ter(const int x, const int y, const int z) const;
+    const oter_id get_ter( const tripoint &p ) const;
     bool&   seen(int x, int y, int z);
     bool&   explored(int x, int y, int z);
-    bool is_safe(int x, int y, int z); // true if monsters_at is empty, or only woodland
-    bool is_road_or_highway(int x, int y, int z);
     bool is_explored(int const x, int const y, int const z) const;
 
-    bool has_note(int const x, int const y, int const z) const;
-    std::string const& note(int const x, int const y, int const z) const;
-    void add_note(int const x, int const y, int const z, std::string const& message);
-    void delete_note(int const x, int const y, int const z) { add_note(x, y, z, ""); }
+    bool has_note(int x, int y, int z) const;
+    std::string const& note(int x, int y, int z) const;
+    void add_note(int x, int y, int z, std::string message);
+    void delete_note(int x, int y, int z);
 
+    /**
+     * Getter for overmap scents.
+     * @returns a reference to a scent_trace from the requested location.
+     */
+    const scent_trace &scent_at( const tripoint &loc ) const;
+    /**
+     * Setter for overmap scents, stores the provided scent at the provided location.
+     */
+    void set_scent( const tripoint &loc, scent_trace &new_scent );
+
+    /**
+     * @returns Whether @param loc is within desired bounds of the overmap
+     * @param clearance Minimal distance from the edges of the overmap
+     */
+    static bool inbounds( const tripoint &loc, int clearance = 0 );
+    static bool inbounds( int x, int y, int z, int clearance = 0 ); /// @todo: This one should be obsoleted
     /**
      * Display a list of all notes on this z-level. Let the user choose
      * one or none of them.
@@ -313,10 +317,8 @@ class overmap
      */
     static point display_notes(int z);
     /**
-     * Dummy value, used to indicate that a point returned by a function
-     * is invalid.
+     * Dummy value, used to indicate that a point returned by a function is invalid.
      */
-    static const point invalid_point;
     static const tripoint invalid_tripoint;
     /**
      * Return a vector containing the absolute coordinates of
@@ -329,62 +331,88 @@ class overmap
      * Interactive point choosing; used as the map screen.
      * The map is initially center at the players position.
      * @returns The absolute coordinates of the chosen point or
-     * @ref invalid_point if canceled with escape (or similar key).
+     * invalid_point if canceled with Escape (or similar key).
      */
     static tripoint draw_overmap();
+    /**
+     * Draw overmap like with @ref draw_overmap() and display hordes.
+     */
+    static tripoint draw_hordes();
+    /**
+     * Draw overmap like with @ref draw_overmap() and display the weather.
+     */
+    static tripoint draw_weather();
+    /**
+     * Draw overmap like with @ref draw_overmap() and display scent traces.
+     */
+    static tripoint draw_scents();
+    /**
+     * Draw overmap like with @ref draw_overmap() and display the given zone.
+     */
+    static tripoint draw_zones( tripoint const &center, tripoint const &select, int const iZoneIndex );
     /**
      * Same as @ref draw_overmap() but starts at select if set.
      * Otherwise on players location.
      */
-    static tripoint draw_overmap(const tripoint& center,
-                                 bool debug_mongroup = false,
-                                 const tripoint& select = tripoint(-1, -1, -1),
-                                 const int iZoneIndex = -1);
     /**
      * Same as above but start at z-level z instead of players
      * current z-level, x and y are taken from the players position.
      */
     static tripoint draw_overmap(int z);
 
-  /** Get the x coordinate of the left border of this overmap. */
-  int get_left_border();
+    static tripoint draw_editor();
 
-  /** Get the x coordinate of the right border of this overmap. */
-  int get_right_border();
+    /** Returns the (0, 0) corner of the overmap in the global coordinates. */
+    point global_base_point() const;
 
-  /** Get the y coordinate of the top border of this overmap. */
-  int get_top_border();
+    // @todo: Should depend on coordinates
+    const regional_settings& get_settings() const
+    {
+        return settings;
+    }
 
-  /** Get the y coordinate of the bottom border of this overmap. */
-  int get_bottom_border();
+    // Returns a batch of the default enabled specials.
+    overmap_special_batch get_enabled_specials() const;
 
-  const regional_settings& get_settings(const int x, const int y, const int z) {
-     (void)x;
-     (void)y;
-     (void)z; // todo
-
-     return settings;
-  }
-    void clear_mon_groups() { zg.clear(); }
+    void clear_mon_groups();
 private:
     std::multimap<tripoint, mongroup> zg;
 public:
-  // TODO: make private
+    /** Unit test enablers to check if a given mongroup is present. */
+    bool mongroup_check(const mongroup &candidate) const;
+    bool monster_check(const std::pair<tripoint, monster> &candidate) const;
+
+    // TODO: make private
   std::vector<radio_tower> radios;
-  std::vector<npc *> npcs;
   std::map<int, om_vehicle> vehicles;
   std::vector<city> cities;
   std::vector<city> roads_out;
 
+        /// Adds the npc to the contained list of npcs ( @ref npcs ).
+        void insert_npc( std::shared_ptr<npc> who );
+        /// Removes the npc and returns it ( or returns nullptr if not found ).
+        std::shared_ptr<npc> erase_npc( const int id );
+
+        void for_each_npc( std::function<void( npc & )> callback );
+        void for_each_npc( std::function<void( const npc & )> callback ) const;
+
+        std::shared_ptr<npc> find_npc( int id ) const;
+
+        const std::vector<std::shared_ptr<npc>> &get_npcs() const {
+            return npcs;
+        }
+        std::vector<std::shared_ptr<npc>> get_npcs( const std::function<bool( const npc & )> &predicate ) const;
+
  private:
-  friend class overmapbuffer;
-  point loc;
+    friend class overmapbuffer;
+
+        std::vector<std::shared_ptr<npc>> npcs;
+
+    bool nullbool = false;
+    point loc{ 0, 0 };
 
     std::array<map_layer, OVERMAP_LAYERS> layer;
-
-  oter_id nullret;
-  bool nullbool;
-  std::string nullstr;
+    std::unordered_map<tripoint, scent_trace> scents;
 
     /**
      * When monsters despawn during map-shifting they will be added here.
@@ -395,92 +423,161 @@ public:
     std::unordered_multimap<tripoint, monster> monster_map;
     regional_settings settings;
 
-  // Initialise
-  void init_layers();
-  // open existing overmap, or generate a new one
-  void open();
+    oter_id get_default_terrain( int z ) const;
+
+    // Initialize
+    void init_layers();
+    // open existing overmap, or generate a new one
+    void open( overmap_special_batch &enabled_specials );
+ public:
   // parse data in an opened overmap file
-  void unserialize(std::ifstream & fin, std::string const & plrfilename, std::string const & terfilename);
+  void unserialize(std::istream &fin);
+  // Parse per-player overmap view data.
+  void unserialize_view(std::istream &fin);
+  // Save data in an opened overmap file
+  void serialize(std::ostream &fin) const;
+  // Save per-player overmap view data.
+  void serialize_view(std::ostream &fin) const;
   // parse data in an old overmap file
-  bool unserialize_legacy(std::ifstream & fin, std::string const & plrfilename, std::string const & terfilename);
+  void unserialize_legacy(std::istream &fin);
+  void unserialize_view_legacy(std::istream &fin);
+ private:
+    void generate( const overmap* north, const overmap* east,
+                   const overmap* south, const overmap* west,
+                   overmap_special_batch &enabled_specials );
+    bool generate_sub( int const z );
 
-  void generate(const overmap* north, const overmap* east, const overmap* south, const overmap* west);
-  bool generate_sub(int const z);
+    const city &get_nearest_city( const tripoint &p ) const;
 
-  /**
-   * Draws the overmap terrain.
-   * @param w The window to draw in.
-   * @param center The global overmap terrain coordinate of the center
-   * of the view. The z-component is used to determine the z-level.
-   * @param orig The global overmap terrain coordinates of the player.
-   * It will be marked specially.
-   * @param debug_monstergroups Displays monster groups on the overmap.
-   */
-  static void draw(WINDOW *w, WINDOW *wbar, const tripoint &center,
-            const tripoint &orig, bool blink, bool showExplored,
-            input_context* inp_ctxt, bool debug_monstergroups = false,
-            const int iZoneIndex = -1);
+    void signal_hordes( const tripoint &p, int sig_power );
+    void process_mongroups();
+    void move_hordes();
+
+    static bool obsolete_terrain( const std::string &ter );
+    void convert_terrain( const std::unordered_map<tripoint, std::string> &needs_conversion );
+
+    // drawing relevant data, e.g. what to draw.
+    struct draw_data_t {
+        // draw monster groups on the overmap.
+        bool debug_mongroup = false;
+        // draw weather, e.g. clouds etc.
+        bool debug_weather = false;
+        // draw editor.
+        bool debug_editor = false;
+        // draw scent traces.
+        bool debug_scent = false;
+        // draw zone location.
+        tripoint select = tripoint(-1, -1, -1);
+        int iZoneIndex = -1;
+    };
+    static tripoint draw_overmap(const tripoint& center, const draw_data_t &data);
+    /**
+     * Draws the overmap terrain.
+     * @param w The window to draw map in.
+     * @param wbar Window containing status bar
+     * @param center The global overmap terrain coordinate of the center
+     * of the view. The z-component is used to determine the z-level.
+     * @param orig The global overmap terrain coordinates of the player.
+     * It will be marked specially.
+     * @param blink Whether blinking is enabled
+     * @param showExplored Whether display of explored territory is enabled
+     * @param inp_ctxt Input context in this screen
+     * @param data Various other drawing flags, largely regarding debug information
+     */
+    static void draw( const catacurses::window &w, const catacurses::window &wbar,
+                      const tripoint &center, const tripoint &orig, bool blink, bool showExplored,
+                      input_context *inp_ctxt, const draw_data_t &data );
+
+    static void draw_city_labels( const catacurses::window &w, const tripoint &center );
 
   // Overall terrain
   void place_river(point pa, point pb);
   void place_forest();
+
   // City Building
+  overmap_special_id pick_random_building_to_place( int town_dist ) const;
+
   void place_cities();
-  void put_buildings(int x, int y, int dir, city town);
-  void make_road(int cx, int cy, int cs, int dir, city town);
-  bool build_lab(int x, int y, int z, int s);
-  bool build_ice_lab(int x, int y, int z, int s);
+  void place_building( const tripoint &p, om_direction::type dir, const city &town );
+
+  void build_city_street( const overmap_connection &connection, const point &p, int cs, om_direction::type dir, const city &town );
+  bool build_lab(int x, int y, int z, int s, bool ice = false);
   void build_anthill(int x, int y, int z, int s);
-  void build_tunnel(int x, int y, int z, int s, int dir);
+  void build_acid_anthill(int x, int y, int z, int s);
+  void build_tunnel( int x, int y, int z, int s, om_direction::type dir );
   bool build_slimepit(int x, int y, int z, int s);
   void build_mine(int x, int y, int z, int s);
   void place_rifts(int const z);
-  // Connection highways
-  void place_hiways(std::vector<city> cities, int z, const std::string &base);
-  void place_subways(std::vector<point> stations);
-  void make_hiway(int x1, int y1, int x2, int y2, int z, const std::string &base);
-  void building_on_hiway(int x, int y, int dir);
+
+    // Connection laying
+    pf::path lay_out_connection( const overmap_connection &connection, const point &source, const point &dest, int z ) const;
+    pf::path lay_out_street( const overmap_connection &connection, const point &source, om_direction::type dir, size_t len ) const;
+
+    void build_connection( const overmap_connection &connection, const pf::path &path, int z );
+    void build_connection( const point &source, const point &dest, int z, const overmap_connection &connection );
+    void connect_closest_points( const std::vector<point> &points, int z, const overmap_connection &connection );
   // Polishing
   bool check_ot_type(const std::string &otype, int x, int y, int z) const;
-  bool check_ot_type_road(const std::string &otype, int x, int y, int z);
-  bool is_road(int x, int y, int z);
-  void polish(const int z, const std::string &terrain_type="all");
-  void good_road(const std::string &base, int x, int y, int z);
+  void chip_rock(int x, int y, int z);
+
+  void polish_river();
   void good_river(int x, int y, int z);
-  oter_id rotate(const oter_id &oter, int dir);
-  bool allowed_terrain(tripoint p, int width, int height, std::list<std::string> allowed);
-  bool allowed_terrain(tripoint p, std::list<tripoint>, std::list<std::string> allowed, std::list<std::string> disallowed);
-  bool allow_special(tripoint p, overmap_special special, int &rotate);
-  // Monsters, radios, etc.
-  void place_specials();
-  void place_special(overmap_special special, tripoint p, int rotation);
-  void place_mongroups();
-  void place_radios();
+
+  // Returns a vector of permuted coordinates of overmap sectors.
+  // Each sector consists of 12x12 small maps. Coordinates of the sectors are in range [0, 15], [0, 15].
+  // Check OMAPX, OMAPY, and OMSPEC_FREQ to learn actual values.
+  std::vector<point> get_sectors() const;
+
+    om_direction::type random_special_rotation( const overmap_special &special, const tripoint &p ) const;
+
+    bool can_place_special( const overmap_special &special, const tripoint &p, om_direction::type dir ) const;
+
+    void place_special( const overmap_special &special, const tripoint &p, om_direction::type dir, const city &cit );
+    /**
+     * Iterate over the overmap and place the quota of specials.
+     * If the stated minimums are not reached, it will spawn a new nearby overmap
+     * and continue placing specials there.
+     * @param enabled_specials specifies what specials to place, and tracks how many have been placed.
+     **/
+    void place_specials( overmap_special_batch &enabled_specials );
+    /**
+     * Walk over the overmap and attempt to place specials.
+     * @param enabled_specials vector of objects that track specials being placed.
+     * @param sectors sectors in which to attempt placement.
+     * @param place_optional restricts attempting to place specials that have met their minimum count in the first pass.
+     */
+    void place_specials_pass( overmap_special_batch &enabled_specials,
+                              std::vector<point> &sectors, bool place_optional );
+
+    /**
+     * Attempts to place specials within a sector.
+     * @param enabled_specials vector of objects that track specials being placed.
+     * @param sector sector identifies the location where specials are being placed.
+     * @param place_optional restricts attempting to place specials that have met their minimum count in the first pass.
+     */
+    bool place_special_attempt( overmap_special_batch &enabled_specials,
+                                const point &sector, bool place_optional );
+
+    void place_mongroups();
+    void place_radios();
 
     void add_mon_group(const mongroup &group);
-    // not available because *every* overmap needs location, so use the other constructor.
-    overmap() = delete;
+
+    void load_monster_groups( JsonIn &jo );
+    void load_legacy_monstergroups( JsonIn &jo );
+    void save_monster_groups( JsonOut &jo ) const;
 };
 
-// TODO: readd the stream operators
-//std::ostream & operator<<(std::ostream &, const overmap *);
-//std::ostream & operator<<(std::ostream &, const overmap &);
-//std::ostream & operator<<(std::ostream &, const city &);
+typedef std::unordered_map<std::string, regional_settings> t_regional_settings_map;
+typedef t_regional_settings_map::const_iterator t_regional_settings_map_citr;
+extern t_regional_settings_map region_settings_map;
 
-extern std::unordered_map<std::string,oter_t> otermap;
-extern std::vector<oter_t> oterlist;
-//extern const regional_settings default_region_settings;
-extern std::unordered_map<std::string, regional_settings> region_settings_map;
-
-void load_overmap_terrain(JsonObject &jo);
-void reset_overmap_terrain();
 void load_region_settings(JsonObject &jo);
 void reset_region_settings();
-
-void finalize_overmap_terrain();
+void load_region_overlay(JsonObject &jo);
+void apply_region_overlay(JsonObject &jo, regional_settings &region);
 
 bool is_river(const oter_id &ter);
 bool is_ot_type(const std::string &otype, const oter_id &oter);
-map_extras& get_extras(const std::string &name);
 
 #endif

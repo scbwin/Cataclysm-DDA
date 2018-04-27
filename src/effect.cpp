@@ -1,60 +1,91 @@
 #include "effect.h"
+#include "debug.h"
 #include "rng.h"
 #include "output.h"
+#include "string_formatter.h"
 #include "player.h"
+#include "translations.h"
+#include "messages.h"
+#include "json.h"
+
 #include <map>
 #include <sstream>
 
-std::map<std::string, effect_type> effect_types;
+namespace {
+std::map<efftype_id, effect_type> effect_types;
+}
 
-void weed_msg(player *p) {
-    int howhigh = p->get_effect_dur("weed_high");
-    int smarts = p->get_int();
+/** @relates string_id */
+template<>
+const effect_type& string_id<effect_type>::obj() const
+{
+    const auto iter = effect_types.find( *this );
+    if( iter == effect_types.end() ) {
+        debugmsg( "invalid effect type id %s", c_str() );
+        static const effect_type dummy{};
+        return dummy;
+    }
+    return iter->second;
+}
+
+/** @relates string_id */
+template<>
+bool string_id<effect_type>::is_valid() const
+{
+    return effect_types.count( *this ) > 0;
+}
+
+const efftype_id effect_weed_high( "weed_high" );
+
+void weed_msg( player &p ) {
+    int howhigh = p.get_effect_dur( effect_weed_high );
+    ///\EFFECT_INT changes messages when smoking weed
+    int smarts = p.get_int();
     if(howhigh > 125 && one_in(7)) {
         int msg = rng(0,5);
         switch(msg) {
         case 0: // Freakazoid
-            p->add_msg_if_player(_("The scariest thing in the world would be... if all the air in the world turned to WOOD!"));
+            p.add_msg_if_player( _( "The scariest thing in the world would be... if all the air in the world turned to WOOD!" ) );
             return;
         case 1: // Simpsons
-            p->add_msg_if_player(_("Could Jesus microwave a burrito so hot, that he himself couldn't eat it?"));
-            p->hunger += 2;
+            p.add_msg_if_player( _( "Could Jesus microwave a burrito so hot, that he himself couldn't eat it?" ) );
+            p.mod_hunger( 2 );
             return;
         case 2:
             if(smarts > 8) { // Timothy Leary
-                p->add_msg_if_player(_("Science is all metaphor."));
-            } else if(smarts < 3){ // It's Always Sunny in Phildelphia
-                p->add_msg_if_player(_("Science is a liar sometimes."));
+                p.add_msg_if_player( _( "Science is all metaphor." ) );
+            } else if(smarts < 3){ // It's Always Sunny in Philadelphia
+                p.add_msg_if_player( _( "Science is a liar sometimes." ) );
             } else { // Durr
-                p->add_msg_if_player(_("Science is... wait, what was I talking about again?"));
+                p.add_msg_if_player( _( "Science is... wait, what was I talking about again?" ) );
             }
             return;
         case 3: // Dazed and Confused
-            p->add_msg_if_player(_("Behind every good man there is a woman, and that woman was Martha Washington, man."));
+            p.add_msg_if_player( _( "Behind every good man there is a woman, and that woman was Martha Washington, man." ) );
             if(one_in(2)) {
-                p->add_msg_if_player(_("Every day, George would come home, and she would have a big fat bowl waiting for him when he came in the door, man."));
+                p.add_msg_if_player( _( "Every day, George would come home, and she would have a big fat bowl waiting for him when he came in the door, man." ) );
                 if(one_in(2)) {
-                    p->add_msg_if_player(_("She was a hip, hip, hip lady, man."));
+                    p.add_msg_if_player( _( "She was a hip, hip, hip lady, man." ) );
                 }
             }
             return;
         case 4:
-            if(p->has_amount("money_bundle", 1)) { // Half Baked
-                p->add_msg_if_player(_("You ever see the back of a twenty dollar bill... on weed?"));
+            if( p.has_amount( "money_bundle", 1 ) ) { // Half Baked
+                p.add_msg_if_player( _( "You ever see the back of a twenty dollar bill... on weed?" ) );
                 if(one_in(2)) {
-                    p->add_msg_if_player(_("Oh, there's some crazy shit, man. There's a dude in the bushes. Has he got a gun? I dunno!"));
+                    p.add_msg_if_player( _( "Oh, there's some crazy shit, man.  There's a dude in the bushes.  Has he got a gun?  I dunno!" ) );
                     if(one_in(3)) {
-                        p->add_msg_if_player(_("RED TEAM GO, RED TEAM GO!"));
+                        p.add_msg_if_player( _( "RED TEAM GO, RED TEAM GO!" ) );
                     }
                 }
-            } else if(p->has_amount("holybook_bible", 1)) {
-                p->add_msg_if_player(_("You have a sudden urge to flip your bible open to Genesis 1:29..."));
+            } else if( p.has_amount( "holybook_bible", 1 ) ) {
+                p.add_msg_if_player( _( "You have a sudden urge to flip your bible open to Genesis 1:29..." ) );
             } else { // Big Lebowski
-                p->add_msg_if_player(_("That rug really tied the room together..."));
+                p.add_msg_if_player( _( "That rug really tied the room together..." ) );
             }
             return;
         case 5:
-            p->add_msg_if_player(_("I used to do drugs...  I still do, but I used to, too."));
+            p.add_msg_if_player( _( "I used to do drugs...  I still do, but I used to, too." ) );
         default:
             return;
         }
@@ -62,36 +93,36 @@ void weed_msg(player *p) {
         int msg = rng(0, 5);
         switch(msg) {
         case 0: // Bob Marley
-            p->add_msg_if_player(_("The herb reveals you to yourself."));
+            p.add_msg_if_player( _( "The herb reveals you to yourself." ) );
             return;
         case 1: // Freakazoid
-            p->add_msg_if_player(_("Okay, like, the scariest thing in the world would be... if like you went to grab something and it wasn't there!"));
+            p.add_msg_if_player( _( "Okay, like, the scariest thing in the world would be... if like you went to grab something and it wasn't there!" ) );
             return;
         case 2: // Simpsons
-            p->add_msg_if_player(_("They call them fingers, but I never see them fing."));
+            p.add_msg_if_player( _( "They call them fingers, but I never see them fing." ) );
             if(smarts > 2 && one_in(2)) {
-                p->add_msg_if_player(_("... oh, there they go."));
+                p.add_msg_if_player( _( "... oh, there they go." ) );
             }
             return;
         case 3: // Bill Hicks
-            p->add_msg_if_player(_("You suddenly realize that all matter is merely energy condensed to a slow vibration, and we are all one consciousness experiencing itself subjectively."));
+            p.add_msg_if_player( _( "You suddenly realize that all matter is merely energy condensed to a slow vibration, and we are all one consciousness experiencing itself subjectively." ) );
             return;
         case 4: // Steve Martin
-            p->add_msg_if_player(_("I usually only smoke in the late evening."));
+            p.add_msg_if_player( _( "I usually only smoke in the late evening." ) );
             if(one_in(4)) {
-                p->add_msg_if_player(_("Oh, occasionally the early evening, but usually the late evening, or the mid-evening."));
+                p.add_msg_if_player( _( "Oh, occasionally the early evening, but usually the late evening, or the mid-evening." ) );
             }
             if(one_in(4)) {
-                p->add_msg_if_player(_("Just the early evening, mid-evening and late evening."));
+                p.add_msg_if_player( _( "Just the early evening, mid-evening and late evening." ) );
             }
             if(one_in(4)) {
-                p->add_msg_if_player(_("Occasionally, early afternoon, early mid-afternoon, or perhaps the late mid-afternoon."));
+                p.add_msg_if_player( _( "Occasionally, early afternoon, early mid-afternoon, or perhaps the late mid-afternoon." ) );
             }
             if(one_in(4)) {
-                p->add_msg_if_player(_("Oh, sometimes the early-mid-late-early-morning."));
+                p.add_msg_if_player( _( "Oh, sometimes the early-mid-late-early-morning." ) );
             }
             if(smarts > 2) {
-                p->add_msg_if_player(_("...But never at dusk."));
+                p.add_msg_if_player( _( "...But never at dusk." ) );
             }
             return;
         case 5:
@@ -102,22 +133,22 @@ void weed_msg(player *p) {
         int msg = rng(0, 5);
         switch(msg) {
         case 0: // Cheech and Chong
-            p->add_msg_if_player(_("Dave's not here, man."));
+            p.add_msg_if_player( _( "Dave's not here, man." ) );
             return;
         case 1: // Real Life
-            p->add_msg_if_player(_("Man, a cheeseburger sounds SO awesome right now."));
-            p->hunger += 4;
-            if(p->has_trait("VEGETARIAN")) {
-               p->add_msg_if_player(_("Eh... maybe not."));
-            } else if(p->has_trait("LACTOSE")) {
-                p->add_msg_if_player(_("I guess, maybe, without the cheese... yeah."));
+            p.add_msg_if_player( _( "Man, a cheeseburger sounds SO awesome right now." ) );
+            p.mod_hunger( 4 );
+            if( p.has_trait( trait_id( "VEGETARIAN" ) ) ) {
+                p.add_msg_if_player( _( "Eh... maybe not." ) );
+            } else if( p.has_trait( trait_id( "LACTOSE" ) ) ) {
+                p.add_msg_if_player( _( "I guess, maybe, without the cheese... yeah." ) );
             }
             return;
         case 2: // Dazed and Confused
-            p->add_msg_if_player( _("Walkin' down the hall, by myself, smokin' a j with fifty elves."));
+            p.add_msg_if_player( _( "Walkin' down the hall, by myself, smokin' a j with fifty elves." ) );
             return;
         case 3: // Half Baked
-            p->add_msg_if_player(_("That weed was the shiz-nittlebam snip-snap-sack."));
+            p.add_msg_if_player( _( "That weed was the shiz-nittlebam snip-snap-sack." ) );
             return;
         case 4:
             weed_msg(p); // re-roll
@@ -129,7 +160,7 @@ void weed_msg(player *p) {
 }
 
 static void extract_effect( JsonObject &j, std::unordered_map<std::tuple<std::string, bool, std::string, std::string>, double> &data,
-                std::string mod_type, std::string data_key, std::string type_key, std::string arg_key)
+                            std::string mod_type, std::string data_key, std::string type_key, std::string arg_key)
 {
     double val = 0;
     double reduced_val = 0;
@@ -148,14 +179,14 @@ static void extract_effect( JsonObject &j, std::unordered_map<std::tuple<std::st
         data[std::make_tuple(data_key, false, type_key, arg_key)] = val;
     }
     if (reduced_val != 0) {
-        data[std::make_tuple(data_key, true, type_key, arg_key)] = val;
+        data[std::make_tuple(data_key, true, type_key, arg_key)] = reduced_val;
     }
 }
 
 bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
     if (jsobj.has_object(member)) {
         JsonObject j = jsobj.get_object(member);
-        
+
         // Stats first
         //                          json field                  type key    arg key
         extract_effect(j, mod_data, "str_mod",          member, "STR",      "min");
@@ -163,7 +194,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "per_mod",          member, "PER",      "min");
         extract_effect(j, mod_data, "int_mod",          member, "INT",      "min");
         extract_effect(j, mod_data, "speed_mod",        member, "SPEED",    "min");
-        
+
         // Then pain
         extract_effect(j, mod_data, "pain_amount",      member, "PAIN",     "amount");
         extract_effect(j, mod_data, "pain_min",         member, "PAIN",     "min");
@@ -172,7 +203,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "pain_chance",      member, "PAIN",     "chance_top");
         extract_effect(j, mod_data, "pain_chance_bot",  member, "PAIN",     "chance_bot");
         extract_effect(j, mod_data, "pain_tick",        member, "PAIN",     "tick");
-        
+
         // Then hurt
         extract_effect(j, mod_data, "hurt_amount",      member, "HURT",     "amount");
         extract_effect(j, mod_data, "hurt_min",         member, "HURT",     "min");
@@ -180,7 +211,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "hurt_chance",      member, "HURT",     "chance_top");
         extract_effect(j, mod_data, "hurt_chance_bot",  member, "HURT",     "chance_bot");
         extract_effect(j, mod_data, "hurt_tick",        member, "HURT",     "tick");
-        
+
         // Then sleep
         extract_effect(j, mod_data, "sleep_amount",     member, "SLEEP",    "amount");
         extract_effect(j, mod_data, "sleep_min",        member, "SLEEP",    "min");
@@ -188,7 +219,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "sleep_chance",     member, "SLEEP",    "chance_top");
         extract_effect(j, mod_data, "sleep_chance_bot", member, "SLEEP",    "chance_bot");
         extract_effect(j, mod_data, "sleep_tick",       member, "SLEEP",    "tick");
-        
+
         // Then pkill
         extract_effect(j, mod_data, "pkill_amount",     member, "PKILL",    "amount");
         extract_effect(j, mod_data, "pkill_min",        member, "PKILL",    "min");
@@ -197,7 +228,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "pkill_chance",     member, "PKILL",    "chance_top");
         extract_effect(j, mod_data, "pkill_chance_bot", member, "PKILL",    "chance_bot");
         extract_effect(j, mod_data, "pkill_tick",       member, "PKILL",    "tick");
-        
+
         // Then stim
         extract_effect(j, mod_data, "stim_amount",      member, "STIM",     "amount");
         extract_effect(j, mod_data, "stim_min",         member, "STIM",     "min");
@@ -207,7 +238,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "stim_chance",      member, "STIM",     "chance_top");
         extract_effect(j, mod_data, "stim_chance_bot",  member, "STIM",     "chance_bot");
         extract_effect(j, mod_data, "stim_tick",        member, "STIM",     "tick");
-        
+
         // Then health
         extract_effect(j, mod_data, "health_amount",    member, "HEALTH",   "amount");
         extract_effect(j, mod_data, "health_min",       member, "HEALTH",   "min");
@@ -217,7 +248,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "health_chance",    member, "HEALTH",   "chance_top");
         extract_effect(j, mod_data, "health_chance_bot",member, "HEALTH",   "chance_bot");
         extract_effect(j, mod_data, "health_tick",      member, "HEALTH",   "tick");
-        
+
         // Then health mod
         extract_effect(j, mod_data, "h_mod_amount",     member, "H_MOD",    "amount");
         extract_effect(j, mod_data, "h_mod_min",        member, "H_MOD",    "min");
@@ -227,7 +258,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "h_mod_chance",     member, "H_MOD",    "chance_top");
         extract_effect(j, mod_data, "h_mod_chance_bot", member, "H_MOD",    "chance_bot");
         extract_effect(j, mod_data, "h_mod_tick",       member, "H_MOD",    "tick");
-        
+
         // Then radiation
         extract_effect(j, mod_data, "rad_amount",       member, "RAD",      "amount");
         extract_effect(j, mod_data, "rad_min",          member, "RAD",      "min");
@@ -236,7 +267,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "rad_chance",       member, "RAD",      "chance_top");
         extract_effect(j, mod_data, "rad_chance_bot",   member, "RAD",      "chance_bot");
         extract_effect(j, mod_data, "rad_tick",         member, "RAD",      "tick");
-        
+
         // Then hunger
         extract_effect(j, mod_data, "hunger_amount",    member, "HUNGER",   "amount");
         extract_effect(j, mod_data, "hunger_min",       member, "HUNGER",   "min");
@@ -246,7 +277,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "hunger_chance",    member, "HUNGER",   "chance_top");
         extract_effect(j, mod_data, "hunger_chance_bot",member, "HUNGER",   "chance_bot");
         extract_effect(j, mod_data, "hunger_tick",      member, "HUNGER",   "tick");
-        
+
         // Then thirst
         extract_effect(j, mod_data, "thirst_amount",    member, "THIRST",   "amount");
         extract_effect(j, mod_data, "thirst_min",       member, "THIRST",   "min");
@@ -256,7 +287,7 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "thirst_chance",    member, "THIRST",   "chance_top");
         extract_effect(j, mod_data, "thirst_chance_bot",member, "THIRST",   "chance_bot");
         extract_effect(j, mod_data, "thirst_tick",      member, "THIRST",   "tick");
-        
+
         // Then fatigue
         extract_effect(j, mod_data, "fatigue_amount",    member, "FATIGUE",  "amount");
         extract_effect(j, mod_data, "fatigue_min",       member, "FATIGUE",  "min");
@@ -266,17 +297,26 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
         extract_effect(j, mod_data, "fatigue_chance",    member, "FATIGUE",  "chance_top");
         extract_effect(j, mod_data, "fatigue_chance_bot",member, "FATIGUE",  "chance_bot");
         extract_effect(j, mod_data, "fatigue_tick",      member, "FATIGUE",  "tick");
-        
+
+        // Then stamina
+        extract_effect(j, mod_data, "stamina_amount",    member, "STAMINA",  "amount");
+        extract_effect(j, mod_data, "stamina_min",       member, "STAMINA",  "min");
+        extract_effect(j, mod_data, "stamina_max",       member, "STAMINA",  "max");
+        extract_effect(j, mod_data, "stamina_max_val",   member, "STAMINA",  "max_val");
+        extract_effect(j, mod_data, "stamina_chance",    member, "STAMINA",  "chance_top");
+        extract_effect(j, mod_data, "stamina_chance_bot",member, "STAMINA",  "chance_bot");
+        extract_effect(j, mod_data, "stamina_tick",      member, "STAMINA",  "tick");
+
         // Then coughing
         extract_effect(j, mod_data, "cough_chance",     member, "COUGH",    "chance_top");
         extract_effect(j, mod_data, "cough_chance_bot", member, "COUGH",    "chance_bot");
         extract_effect(j, mod_data, "cough_tick",       member, "COUGH",    "tick");
-        
+
         // Then vomiting
         extract_effect(j, mod_data, "vomit_chance",     member, "VOMIT",    "chance_top");
         extract_effect(j, mod_data, "vomit_chance_bot", member, "VOMIT",    "chance_bot");
         extract_effect(j, mod_data, "vomit_tick",       member, "VOMIT",    "tick");
-        
+
         return true;
     } else {
         return false;
@@ -284,7 +324,6 @@ bool effect_type::load_mod_data(JsonObject &jsobj, std::string member) {
 }
 
 effect_type::effect_type() {}
-effect_type::effect_type(const effect_type &) {}
 
 effect_rating effect_type::get_rating() const
 {
@@ -293,7 +332,7 @@ effect_rating effect_type::get_rating() const
 
 bool effect_type::use_name_ints() const
 {
-    return ((size_t)max_intensity <= name.size());
+    return name.size() > 1;
 }
 
 bool effect_type::use_desc_ints(bool reduced) const
@@ -355,6 +394,10 @@ bool effect_type::get_main_parts() const
 {
     return main_parts_only;
 }
+bool effect_type::is_show_in_info() const
+{
+    return show_in_info;
+}
 bool effect_type::load_miss_msgs(JsonObject &jo, std::string member)
 {
     if (jo.has_array(member)) {
@@ -394,17 +437,30 @@ bool effect_type::load_decay_msgs(JsonObject &jo, std::string member)
     return false;
 }
 
+effect effect::null_effect;
+
+bool effect::is_null() const
+{
+    return this == &null_effect;
+}
+
 std::string effect::disp_name() const
 {
+    if (eff_type->name.empty()) {
+        debugmsg("No names for effect type, ID: %s", eff_type->id.c_str());
+        return "";
+    }
+
     // End result should look like "name (l. arm)" or "name [intensity] (l. arm)"
-    std::stringstream ret;
-    if (eff_type->use_name_ints()) {
-        if(eff_type->name[intensity - 1] == "") {
+    std::ostringstream ret;
+    if( eff_type->use_name_ints() ) {
+        const std::string &d_name = eff_type->name[ std::min<size_t>( intensity, eff_type->name.size() ) - 1 ];
+        if( d_name.empty() ) {
             return "";
         }
-        ret << _(eff_type->name[intensity - 1].c_str());
+        ret << _( d_name.c_str() );
     } else {
-        if(eff_type->name[0] == "") {
+        if( eff_type->name[0].empty() ) {
             return "";
         }
         ret << _(eff_type->name[0].c_str());
@@ -415,6 +471,7 @@ std::string effect::disp_name() const
     if (bp != num_bp) {
         ret << " (" << body_part_name(bp).c_str() << ")";
     }
+
     return ret.str();
 }
 
@@ -424,13 +481,13 @@ struct desc_freq {
     int val;
     std::string pos_string;
     std::string neg_string;
-    
+
     desc_freq(double c, int v, std::string pos, std::string neg) : chance(c), val(v), pos_string(pos), neg_string(neg) {};
 };
 
 std::string effect::disp_desc(bool reduced) const
 {
-    std::stringstream ret;
+    std::ostringstream ret;
     // First print stat changes, adding + if value is positive
     int tmp = get_avg_mod("STR", reduced);
     if (tmp > 0) {
@@ -463,10 +520,10 @@ std::string effect::disp_desc(bool reduced) const
         ret << string_format(_("Speed %d;  "), tmp);
     }
     // Newline if necessary
-    if (ret.str() != "") {
+    if( !ret.str().empty() ) {
         ret << "\n";
     }
-    
+
     // Then print pain/damage/coughing/vomiting, we don't display pkill, health, or radiation
     std::vector<std::string> constant;
     std::vector<std::string> frequent;
@@ -480,12 +537,14 @@ std::string effect::disp_desc(bool reduced) const
     values.push_back(desc_freq(get_percentage("PAIN", val, reduced), val, _("pain"), _("pain")));
     val = get_avg_mod("HURT", reduced);
     values.push_back(desc_freq(get_percentage("HURT", val, reduced), val, _("damage"), _("damage")));
+    val = get_avg_mod("STAMINA", reduced);
+    values.push_back(desc_freq(get_percentage("STAMINA", val, reduced), val, _("stamina recovery"), _("fatigue")));
     val = get_avg_mod("THIRST", reduced);
     values.push_back(desc_freq(get_percentage("THIRST", val, reduced), val, _("thirst"), _("quench")));
     val = get_avg_mod("HUNGER", reduced);
     values.push_back(desc_freq(get_percentage("HUNGER", val, reduced), val, _("hunger"), _("sate")));
     val = get_avg_mod("FATIGUE", reduced);
-    values.push_back(desc_freq(get_percentage("FATIGUE", val, reduced), val, _("fatigue"), _("rest")));
+    values.push_back(desc_freq(get_percentage("FATIGUE", val, reduced), val, _("sleepiness"), _("rest")));
     val = get_avg_mod("COUGH", reduced);
     values.push_back(desc_freq(get_percentage("COUGH", val, reduced), val, _("coughing"), _("coughing")));
     val = get_avg_mod("VOMIT", reduced);
@@ -498,13 +557,13 @@ std::string effect::disp_desc(bool reduced) const
             // +50% chance, every other step
             if (i.chance >= 50.0) {
                 constant.push_back(i.pos_string);
-            // +1% chance, every 100 steps
+                // +1% chance, every 100 steps
             } else if (i.chance >= 1.0) {
                 frequent.push_back(i.pos_string);
-            // +.4% chance, every 250 steps
+                // +.4% chance, every 250 steps
             } else if (i.chance >= .4) {
                 uncommon.push_back(i.pos_string);
-            // <.4% chance
+                // <.4% chance
             } else if (i.chance > 0) {
                 rare.push_back(i.pos_string);
             }
@@ -512,77 +571,36 @@ std::string effect::disp_desc(bool reduced) const
             // +50% chance, every other step
             if (i.chance >= 50.0) {
                 constant.push_back(i.neg_string);
-            // +1% chance, every 100 steps
+                // +1% chance, every 100 steps
             } else if (i.chance >= 1.0) {
                 frequent.push_back(i.neg_string);
-            // +.4% chance, every 250 steps
+                // +.4% chance, every 250 steps
             } else if (i.chance >= .4) {
                 uncommon.push_back(i.neg_string);
-            // <.4% chance
+                // <.4% chance
             } else if (i.chance > 0) {
                 rare.push_back(i.neg_string);
             }
         }
     }
     if (constant.size() > 0) {
-        ret << _("Const: ");
-        for (size_t i = 0; i < constant.size(); i++) {
-            if (i == 0) {
-                // No comma on the first one
-                ret << constant[i];
-            } else {
-                ret << ", " << constant[i];
-            }
-        }
-        ret << " ";
+        ret << _("Const: ") << enumerate_as_string( constant ) << " ";
     }
     if (frequent.size() > 0) {
-        ret << _("Freq: ");
-        for (size_t i = 0; i < frequent.size(); i++) {
-            if (i == 0) {
-                // No comma on the first one
-                ret << frequent[i];
-            } else {
-                ret << ", " << frequent[i];
-            }
-        }
-        ret << " ";
+        ret << _("Freq: ") << enumerate_as_string( frequent ) << " ";
     }
     if (uncommon.size() > 0) {
-        ret << _("Unfreq: ");
-        for (size_t i = 0; i < uncommon.size(); i++) {
-            if (i == 0) {
-                // No comma on the first one
-                ret << uncommon[i];
-            } else {
-                ret << ", " << uncommon[i];
-            }
-        }
-        ret << " ";
+        ret << _("Unfreq: ") << enumerate_as_string( uncommon ) << " ";
     }
     if (rare.size() > 0) {
-        ret << _("Rare: ");
-        for (size_t i = 0; i < rare.size(); i++) {
-            if (i == 0) {
-                // No comma on the first one
-                ret << rare[i];
-            } else {
-                ret << ", " << rare[i];
-            }
-        }
-        // No space needed at the end
+        ret << _("Rare: ") << enumerate_as_string( rare ); // No space needed at the end
     }
-    
+
     // Newline if necessary
-    if (ret.str() != "") {
+    if( !ret.str().empty() ) {
         ret << "\n";
     }
-    
-    // Then print the effect description
-    if (use_part_descs()) {
-        //~ Used for effect descriptions, "Your (body_part_name) (effect description)"
-        ret << string_format(_("Your %s "), body_part_name(bp).c_str());
-    }
+
     std::string tmp_str;
     if (eff_type->use_desc_ints(reduced)) {
         if (reduced) {
@@ -597,50 +615,34 @@ std::string effect::disp_desc(bool reduced) const
             tmp_str = eff_type->desc[0];
         }
     }
-    if(tmp_str != "") {
-        ret << _(tmp_str.c_str());
+    // Then print the effect description
+    if( use_part_descs() ) {
+        ret << string_format(_(tmp_str.c_str()), body_part_name(bp).c_str());
+    } else {
+        if (!tmp_str.empty()) {
+            ret << _(tmp_str.c_str());
+        }
     }
 
     return ret.str();
 }
 
-void effect::decay(std::vector<std::string> &rem_ids, std::vector<body_part> &rem_bps, unsigned int turn, bool player)
+void effect::decay(std::vector<efftype_id> &rem_ids, std::vector<body_part> &rem_bps,
+                   unsigned int turn, bool player)
 {
     // Decay duration if not permanent
-    if (!is_permanent()) {
-        duration -= 1;
-        add_msg( m_debug, "ID: %s, Duration %d", get_id().c_str(), duration );
+    if( !is_permanent() ) {
+        mod_duration( -1, player );
     }
-    // Store current intensity for comparison later
-    int tmp_int = intensity;
-    
-    // Fix bad intensities
-    if (intensity < 1) {
-        add_msg( m_debug, "Bad intensity, ID: %s", get_id().c_str() );
-        intensity = 1;
-    } else if (intensity > 1) {
-        // Decay intensity if necessary
-        if (eff_type->int_decay_tick != 0 && turn % eff_type->int_decay_tick == 0) {
-            intensity += eff_type->int_decay_step;
-        }
+
+    // Decay intensity if supposed to do so
+    // @todo: Remove effects that would decay to 0 intensity?
+    if( intensity > 1 && eff_type->int_decay_tick != 0 && turn % eff_type->int_decay_tick == 0 ) {
+        set_intensity( intensity + eff_type->int_decay_step, player );
     }
-    // Force intensity if it is duration based
-    if (eff_type->int_dur_factor != 0) {
-        // + 1 here so that the lowest is intensity 1, not 0
-        intensity = (duration / eff_type->int_dur_factor) + 1;
-    }
-    // Bound intensity to [1, max_intensity]
-    if (intensity > eff_type->max_intensity) {
-        intensity = eff_type->max_intensity;
-    }
-    // Display decay message if available
-    if (player && tmp_int > intensity && (intensity - 1) < int(eff_type->decay_msgs.size())) {
-        // -1 because intensity = 1 is the first message
-        add_msg(eff_type->decay_msgs[intensity - 1].second, eff_type->decay_msgs[intensity - 1].first.c_str());
-    }
-    
+
     // Add to removal list if duration is <= 0
-    if (duration <= 0) {
+    if( duration <= 0 ) {
         rem_ids.push_back(get_id());
         rem_bps.push_back(bp);
     }
@@ -659,29 +661,34 @@ int effect::get_max_duration() const
 {
     return eff_type->max_duration;
 }
-void effect::set_duration(int dur)
+void effect::set_duration( int dur, bool alert )
 {
     duration = dur;
     // Cap to max_duration if it exists
-    if (eff_type->max_duration > 0 && duration > eff_type->max_duration) {
+    if( eff_type->max_duration > 0 && duration > eff_type->max_duration ) {
         duration = eff_type->max_duration;
     }
+
+    // Force intensity if it is duration based
+    if( eff_type->int_dur_factor != 0 ) {
+        // + 1 here so that the lowest is intensity 1, not 0
+        set_intensity( ( duration / eff_type->int_dur_factor ) + 1, alert );
+    }
+
+    add_msg( m_debug, "ID: %s, Duration %d", get_id().c_str(), duration );
 }
-void effect::mod_duration(int dur)
+void effect::mod_duration( int dur, bool alert )
 {
-    duration += dur;
-    // Cap to max_duration if it exists
-    if (eff_type->max_duration > 0 && duration > eff_type->max_duration) {
-        duration = eff_type->max_duration;
-    }
+    set_duration( duration + dur, alert );
 }
-void effect::mult_duration(double dur)
+void effect::mult_duration( double dur, bool alert )
 {
-    duration *= dur;
-    // Cap to max_duration if it exists
-    if (eff_type->max_duration > 0 && duration > eff_type->max_duration) {
-        duration = eff_type->max_duration;
-    }
+    set_duration( duration * dur, alert );
+}
+
+int effect::get_start_turn() const
+{
+    return start_turn;
 }
 
 body_part effect::get_bp() const
@@ -714,38 +721,57 @@ int effect::get_max_intensity() const
 {
     return eff_type->max_intensity;
 }
-void effect::set_intensity(int nintensity)
+
+int effect::set_intensity( int val, bool alert )
 {
-    intensity = nintensity;
-    // Cap to [1, max_intensity]
-    if (intensity > eff_type->max_intensity) {
-        intensity = eff_type->max_intensity;
-    } else if (intensity < 1) {
+    if( intensity < 1 ) {
+        // Fix bad intensity
+        add_msg( m_debug, "Bad intensity, ID: %s", get_id().c_str() );
         intensity = 1;
     }
-}
-void effect::mod_intensity(int nintensity)
-{
-    intensity += nintensity;
-    // Cap to [1, max_intensity]
-    if (intensity > eff_type->max_intensity) {
-        intensity = eff_type->max_intensity;
-    } else if (intensity < 1) {
-        intensity = 1;
+
+    val = std::max( std::min( val, eff_type->max_intensity ), 1 );
+    if( val == intensity ) {
+        // Nothing to change
+        return intensity;
     }
+
+    if( alert && val < intensity && val - 1 < int( eff_type->decay_msgs.size() ) ) {
+        add_msg( eff_type->decay_msgs[ val - 1 ].second,
+                 eff_type->decay_msgs[ val - 1 ].first.c_str() );
+    }
+
+    int old_intensity = intensity;
+    intensity = val;
+    if( old_intensity != intensity ) {
+        add_msg( m_debug, "%s intensity %d->%d", get_id().c_str(), old_intensity, intensity );
+    }
+
+    return intensity;
 }
 
-std::string effect::get_resist_trait() const
+int effect::mod_intensity( int mod, bool alert )
 {
-    return eff_type->resist_trait;
+    return set_intensity( intensity + mod, alert );
 }
-std::string effect::get_resist_effect() const
+
+const std::vector<trait_id> &effect::get_resist_traits() const
 {
-    return eff_type->resist_effect;
+    return eff_type->resist_traits;
 }
-std::string effect::get_removes_effect() const
+const std::vector<efftype_id> &effect::get_resist_effects() const
 {
-    return eff_type->removes_effect;
+    return eff_type->resist_effects;
+}
+const std::vector<efftype_id> &effect::get_removes_effects() const
+{
+    return eff_type->removes_effects;
+}
+const std::vector<efftype_id> effect::get_blocks_effects() const
+{
+    std::vector<efftype_id> ret = eff_type->removes_effects;
+    ret.insert(ret.end(), eff_type->blocks_effects.begin(), eff_type->blocks_effects.end());
+    return ret;
 }
 
 int effect::get_mod(std::string arg, bool reduced) const
@@ -893,7 +919,7 @@ double effect::get_percentage(std::string arg, int val, bool reduced) const
             return 0;
         }
     }
-    
+
     // We only need to calculate these if we haven't already returned
     int bot_base = 0;
     int bot_scale = 0;
@@ -911,7 +937,7 @@ double effect::get_percentage(std::string arg, int val, bool reduced) const
     if (found_tick_base != mod_data.end()) {
         tick += found_tick_base->second;
     }
-    if (found_bot_scale != mod_data.end()) {
+    if (found_tick_scale != mod_data.end()) {
         tick += found_tick_scale->second * (intensity - 1);
     }
     // Tick is the exception where tick = 0 means tick = 1
@@ -941,7 +967,7 @@ double effect::get_percentage(std::string arg, int val, bool reduced) const
     return ret;
 }
 
-bool effect::activated(unsigned int turn, std::string arg, int val, bool reduced, double mod) const
+bool effect::activated(int turn, std::string arg, int val, bool reduced, double mod) const
 {
     auto &mod_data = eff_type->mod_data;
     auto found_top_base = mod_data.find(std::make_tuple("base_mods", reduced, arg, "chance_top"));
@@ -967,7 +993,7 @@ bool effect::activated(unsigned int turn, std::string arg, int val, bool reduced
             return false;
         }
     }
-    
+
     // We only need to calculate these if we haven't already returned
     int bot_base = 0;
     int bot_scale = 0;
@@ -985,7 +1011,7 @@ bool effect::activated(unsigned int turn, std::string arg, int val, bool reduced
     if (found_tick_base != mod_data.end()) {
         tick += found_tick_base->second;
     }
-    if (found_bot_scale != mod_data.end()) {
+    if (found_tick_scale != mod_data.end()) {
         tick += found_tick_scale->second * (intensity - 1);
     }
     // Tick is the exception where tick = 0 means tick = 1
@@ -993,10 +1019,10 @@ bool effect::activated(unsigned int turn, std::string arg, int val, bool reduced
         tick = 1;
     }
 
-    // Check if tick allows for triggering. If both bot values are zero the formula is 
+    // Check if tick allows for triggering. If both bot values are zero the formula is
     // x_in_y(1, top) i.e. one_in(top), else the formula is x_in_y(top, bot),
     // mod multiplies the overall percentage chances
-    
+
     // has to be an && here to avoid undefined behavior of turn % 0
     if(tick > 0 && turn % tick == 0) {
         if(bot_base != 0 && bot_scale != 0) {
@@ -1014,17 +1040,17 @@ bool effect::activated(unsigned int turn, std::string arg, int val, bool reduced
     return false;
 }
 
-double effect::get_addict_mod(std::string arg, int addict_level) const
+double effect::get_addict_mod( const std::string &arg, int addict_level ) const
 {
     // TODO: convert this to JSON id's and values once we have JSON'ed addictions
     if (arg == "PKILL") {
         if (eff_type->pkill_addict_reduces) {
-            return 1 / std::max(addict_level * 2, 1);
+            return 1.0 / std::max((double)addict_level * 2.0, 1.0);
         } else {
-            return 1;
+            return 1.0;
         }
     } else {
-        return 1;
+        return 1.0;
     }
 }
 
@@ -1035,6 +1061,10 @@ bool effect::get_harmful_cough() const
 int effect::get_dur_add_perc() const
 {
     return eff_type->dur_add_perc;
+}
+int effect::get_int_dur_factor() const
+{
+    return eff_type->int_dur_factor;
 }
 int effect::get_int_add_val() const
 {
@@ -1048,22 +1078,46 @@ std::vector<std::pair<std::string, int>> effect::get_miss_msgs() const
 std::string effect::get_speed_name() const
 {
     // USes the speed_mod_name if one exists, else defaults to the first entry in "name".
-    if (eff_type->speed_mod_name == "") {
+    // But make sure the name for this intensity actually exists!
+    if( !eff_type->speed_mod_name.empty() ) {
+        return eff_type->speed_mod_name;
+    } else if( eff_type->use_name_ints() ) {
+        return eff_type->name[ std::min<size_t>( intensity, eff_type->name.size() ) - 1 ];
+    } else if( !eff_type->name.empty() ) {
         return eff_type->name[0];
     } else {
-        return eff_type->speed_mod_name;
+        return "";
     }
 }
 
-effect_type *effect::get_effect_type() const
+bool effect::impairs_movement() const
+{
+    return eff_type->impairs_movement;
+}
+
+const effect_type *effect::get_effect_type() const
 {
     return eff_type;
 }
 
+// This contains all the effects checked in move_effects
+// It's here and not in json because it is hardcoded anyway
+static const std::unordered_set<efftype_id> hardcoded_movement_impairing = {{
+    efftype_id( "beartrap" ),
+    efftype_id( "crushed" ),
+    efftype_id( "downed" ),
+    efftype_id( "grabbed" ),
+    efftype_id( "heavysnare" ),
+    efftype_id( "in_pit" ),
+    efftype_id( "lightsnare" ),
+    efftype_id( "tied" ),
+    efftype_id( "webbed" ),
+}};
+
 void load_effect_type(JsonObject &jo)
 {
     effect_type new_etype;
-    new_etype.id = jo.get_string("id");
+    new_etype.id = efftype_id( jo.get_string( "id" ) );
 
     if(jo.has_member("name")) {
         JsonArray jsarr = jo.get_array("name");
@@ -1088,14 +1142,10 @@ void load_effect_type(JsonObject &jo)
         while (jsarr.has_more()) {
             new_etype.reduced_desc.push_back(jsarr.next_string());
         }
-    } else if (jo.has_member("desc")) {
-        JsonArray jsarr = jo.get_array("desc");
-        while (jsarr.has_more()) {
-            new_etype.reduced_desc.push_back(jsarr.next_string());
-        }
     } else {
-        new_etype.reduced_desc.push_back("");
+        new_etype.reduced_desc = new_etype.desc;
     }
+
     new_etype.part_descs = jo.get_bool("part_descs", false);
 
     if(jo.has_member("rating")) {
@@ -1118,11 +1168,20 @@ void load_effect_type(JsonObject &jo)
     new_etype.remove_message = jo.get_string("remove_message", "");
     new_etype.apply_memorial_log = jo.get_string("apply_memorial_log", "");
     new_etype.remove_memorial_log = jo.get_string("remove_memorial_log", "");
-    
-    new_etype.resist_trait = jo.get_string("resist_trait", "");
-    new_etype.resist_effect = jo.get_string("resist_effect", "");
-    new_etype.removes_effect = jo.get_string("removes_effect", "");
-    
+
+    for( auto &&f : jo.get_string_array( "resist_traits" ) ) {
+        new_etype.resist_traits.push_back( trait_id( f ) );
+    }
+    for( auto &&f : jo.get_string_array( "resist_effects" ) ) {
+        new_etype.resist_effects.push_back( efftype_id( f ) );
+    }
+    for( auto &&f : jo.get_string_array( "removes_effects" ) ) {
+        new_etype.removes_effects.push_back( efftype_id( f ) );
+    }
+    for( auto &&f : jo.get_string_array( "blocks_effects" ) ) {
+        new_etype.blocks_effects.push_back( efftype_id( f ) );
+    }
+
     new_etype.max_intensity = jo.get_int("max_intensity", 1);
     new_etype.max_duration = jo.get_int("max_duration", 0);
     new_etype.dur_add_perc = jo.get_int("dur_add_perc", 100);
@@ -1130,21 +1189,25 @@ void load_effect_type(JsonObject &jo)
     new_etype.int_decay_step = jo.get_int("int_decay_step", -1);
     new_etype.int_decay_tick = jo.get_int("int_decay_tick", 0);
     new_etype.int_dur_factor = jo.get_int("int_dur_factor", 0);
-    
+
     new_etype.load_miss_msgs(jo, "miss_messages");
     new_etype.load_decay_msgs(jo, "decay_messages");
-    
+
     new_etype.main_parts_only = jo.get_bool("main_parts_only", false);
+    new_etype.show_in_info = jo.get_bool("show_in_info", false);
     new_etype.pkill_addict_reduces = jo.get_bool("pkill_addict_reduces", false);
-    
+
     new_etype.pain_sizing = jo.get_bool("pain_sizing", false);
     new_etype.hurt_sizing = jo.get_bool("hurt_sizing", false);
     new_etype.harmful_cough = jo.get_bool("harmful_cough", false);
-    
+
     new_etype.load_mod_data(jo, "base_mods");
     new_etype.load_mod_data(jo, "scaling_mods");
 
+    new_etype.impairs_movement = hardcoded_movement_impairing.count( new_etype.id ) > 0;
+
     effect_types[new_etype.id] = new_etype;
+
 }
 
 void reset_effect_types()
@@ -1152,22 +1215,34 @@ void reset_effect_types()
     effect_types.clear();
 }
 
+void effect_type::register_ma_buff_effect( const effect_type &eff )
+{
+    if( eff.id.is_valid() ) {
+        debugmsg( "effect id %s of a martial art buff is already used as id for an effect" );
+        return;
+    }
+    effect_types.insert( std::make_pair( eff.id, eff ) );
+}
+
 void effect::serialize(JsonOut &json) const
 {
     json.start_object();
-    json.member("eff_type", eff_type != NULL ? eff_type->id : "");
+    json.member("eff_type", eff_type != NULL ? eff_type->id.str() : "");
     json.member("duration", duration);
     json.member("bp", (int)bp);
     json.member("permanent", permanent);
     json.member("intensity", intensity);
+    json.member("start_turn", start_turn);
     json.end_object();
 }
 void effect::deserialize(JsonIn &jsin)
 {
     JsonObject jo = jsin.get_object();
-    eff_type = &effect_types[jo.get_string("eff_type")];
+    const efftype_id id( jo.get_string( "eff_type" ) );
+    eff_type = &id.obj();
     duration = jo.get_int("duration");
     bp = (body_part)jo.get_int("bp");
     permanent = jo.get_bool("permanent");
     intensity = jo.get_int("intensity");
+    start_turn = jo.get_int("start_turn", 0);
 }

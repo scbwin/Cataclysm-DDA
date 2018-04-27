@@ -1,89 +1,203 @@
+#pragma once
 #ifndef ITYPE_H
 #define ITYPE_H
 
-#include "color.h"
-#include "enums.h"
-#include "iuse.h"
-#include "pldata.h"
-#include "bodypart.h"
-#include "skill.h"
-#include "bionics.h"
-#include "rng.h"
-#include "material.h"
-#include "mtype.h"
+#include "optional.h"
+#include "color.h" // nc_color
+#include "enums.h" // point
+#include "iuse.h" // use_function
+#include "pldata.h" // add_type
+#include "bodypart.h" // body_part::num_bp
+#include "string_id.h"
+#include "explosion.h"
+#include "units.h"
+#include "damage.h"
+#include "translations.h"
+#include "calendar.h"
 
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 #include <bitset>
 #include <memory>
 
-typedef std::string itype_id;
-
 // see item.h
 class item_category;
-struct recipe;
+class gun_mode;
+using gun_mode_id = string_id<gun_mode>;
+class Item_factory;
+class recipe;
+class emit;
+using emit_id = string_id<emit>;
 struct itype;
+class Skill;
+using skill_id = string_id<Skill>;
+struct bionic_data;
+using bionic_id = string_id<bionic_data>;
+class player;
+class item;
+class vitamin;
+using vitamin_id = string_id<vitamin>;
+class ma_technique;
+using matec_id = string_id<ma_technique>;
+enum art_effect_active : int;
+enum art_charge : int;
+enum art_effect_passive : int;
+class material_type;
+using material_id = string_id<material_type>;
+typedef std::string itype_id;
+class ammunition_type;
+using ammotype = string_id<ammunition_type>;
+class fault;
+using fault_id = string_id<fault>;
+struct quality;
+using quality_id = string_id<quality>;
 
-typedef std::string ammotype;
+enum field_id : int;
 
-enum software_type {
-    SW_USELESS,
-    SW_HACKING,
-    SW_MEDICAL,
-    SW_SCIENCE,
-    SW_DATA
+class gun_modifier_data
+{
+    private:
+        std::string name_;
+        int qty_;
+        std::set<std::string> flags_;
+
+    public:
+        /**
+         * @param n A string that can be translated via @ref _ (must have been extracted for translation).
+         */
+        gun_modifier_data( const std::string &n, const int q, const std::set<std::string> &f ) : name_( n ), qty_( q ), flags_( f ) { }
+        /// @returns The translated name of the gun mode.
+        std::string name() const {
+            return _( name_.c_str() );
+        }
+        int qty() const {
+            return qty_;
+        }
+        const std::set<std::string> &flags() const {
+            return flags_;
+        }
 };
 
-enum bigness_property_aspect {
-    BIGNESS_ENGINE_DISPLACEMENT, // combustion engine CC displacement
-    BIGNESS_WHEEL_DIAMETER,      // wheel size in inches, including tire
+class gunmod_location
+{
+    private:
+        std::string _id;
+
+    public:
+        gunmod_location() = default;
+        gunmod_location( const std::string &id ) : _id( id ) { }
+
+        /// Returns the translated name.
+        std::string name() const;
+        /// Returns the location id.
+        std::string str() const {
+            return _id;
+        }
+
+        bool operator==( const gunmod_location &rhs ) const {
+            return _id == rhs._id;
+        }
+        bool operator<( const gunmod_location &rhs ) const {
+            return _id < rhs._id;
+        }
 };
 
-// Returns the name of a category of ammo (e.g. "shot")
-std::string ammo_name(ammotype t);
-// Returns the default ammo for a category of ammo (e.g. ""00_shot"")
-itype_id default_ammo(ammotype guntype);
+struct islot_tool {
+    ammotype ammo_id = ammotype::NULL_ID();
 
-struct explosion_data {
-    // Those 4 values are forwarded to game::explosion.
-    int power;
-    int shrapnel;
-    bool fire;
-    bool blast;
-    explosion_data() : power(-1), fire(false), blast(true) { }
+    itype_id revert_to = "null";
+    std::string revert_msg;
+
+    std::string subtype;
+
+    long max_charges = 0;
+    long def_charges = 0;
+    std::vector<long> rand_charges;
+    unsigned char charges_per_use = 0;
+    unsigned char turns_per_charge = 0;
+};
+
+struct islot_comestible
+{
+    /** subtype, e.g. FOOD, DRINK, MED */
+    std::string comesttype;
+
+     /** tool needed to consume (e.g. lighter for cigarettes) */
+    std::string tool = "null";
+
+    /** Defaults # of charges (drugs, loaf of bread? etc) */
+    long def_charges = 1;
+
+    /** effect on character thirst (may be negative) */
+    int quench = 0;
+
+    /** effect on character nutrition (may be negative) */
+    int nutr = 0;
+
+    /** Time until becomes rotten at standard temperature, or zero if never spoils */
+    time_duration spoils = 0;
+
+    /** addiction potential */
+    int addict = 0;
+
+    /** effects of addiction */
+    add_type add = ADD_NULL;
+
+    /** effect on morale when consuming */
+    int fun = 0;
+
+    /** stimulant effect */
+    int stim = 0;
+
+    /** @todo: add documentation */
+    int healthy = 0;
+
+    /** chance (odds) of becoming parasitised when eating (zero if never occurs) */
+    int parasites = 0;
+
+    /** vitamins potentially provided by this comestible (if any) */
+    std::map<vitamin_id, int> vitamins;
+
+    /** 1 nutr ~= 8.7kcal (1 nutr/5min = 288 nutr/day at 2500kcal/day) */
+    static constexpr float kcal_per_nutr = 2500.0f / ( 12 * 24 );
+
+    int get_calories() const {
+        return nutr * kcal_per_nutr;
+    }
+};
+
+struct islot_brewable {
+    /** What are the results of fermenting this item? */
+    std::vector<std::string> results;
+
+    /** How long for this brew to ferment. */
+    time_duration time = 0;
 };
 
 struct islot_container {
     /**
-     * Volume, scaled by the default-stack size of the item that is contained in this container.
+     * Inner volume of the container.
      */
-    int contains;
+    units::volume contains = 0;
     /**
      * Can be resealed.
      */
-    bool seals;
+    bool seals = false;
     /**
      * Can hold liquids.
      */
-    bool watertight;
+    bool watertight = false;
     /**
      * Contents do not spoil.
      */
-    bool preserves;
+    bool preserves = false;
     /**
-     * Volume of the item does not include volume of the content.
+     * If this is set to anything but "null", changing this container's contents in any way
+     * will turn this item into that type.
      */
-    bool rigid;
-
-    islot_container()
-    : contains( 0 )
-    , seals( false )
-    , watertight( false )
-    , preserves( false )
-    , rigid( false )
-    {
-    }
+    itype_id unseals_into = "null";
 };
 
 struct islot_armor {
@@ -91,110 +205,117 @@ struct islot_armor {
      * Bitfield of enum body_part
      * TODO: document me.
      */
-    std::bitset<num_bp> covers;
+    body_part_set covers;
     /**
-     * Bitfield of enum body_part
-     * TODO: document me.
+     * Whether this item can be worn on either side of the body
      */
-    std::bitset<num_bp> sided;
+    bool sided = false;
     /**
      * How much this item encumbers the player.
      */
-    signed char encumber;
+    int encumber = 0;
     /**
      * Percentage of the body part area that this item covers.
      * This determines how likely it is to hit the item instead of the player.
      */
-    unsigned char coverage;
+    int coverage = 0;
     /**
      * TODO: document me.
      */
-    unsigned char thickness;
+    int thickness = 0;
     /**
      * Resistance to environmental effects.
      */
-    unsigned char env_resist;
+    int env_resist = 0;
     /**
      * How much warmth this item provides.
      */
-    signed char warmth;
+    int warmth = 0;
     /**
      * How much storage this items provides when worn.
      */
-    unsigned char storage;
+    units::volume storage = 0;
     /**
      * Whether this is a power armor item.
      */
-    bool power_armor;
-
-    islot_armor()
-    : covers( 0 )
-    , sided( 0 )
-    , encumber( 0 )
-    , coverage( 0 )
-    , thickness( 0 )
-    , env_resist( 0 )
-    , warmth( 0 )
-    , storage( 0 )
-    , power_armor( false )
-    {
-    }
+    bool power_armor = false;
 };
 
 struct islot_book {
     /**
-     * Which skill it upgrades, if any. Can be NULL.
-     * TODO: this should be a pointer to const
+     * Which skill it upgrades, if any. Can be @ref skill_id::NULL_ID.
      */
-    const Skill* skill;
+    skill_id skill = skill_id::NULL_ID();
     /**
      * The skill level the book provides.
      */
-    int level;
+    int level = 0;
     /**
      * The skill level required to understand it.
      */
-    int req;
+    int req = 0;
     /**
      * How fun reading this is, can be negative.
      */
-    int fun;
+    int fun = 0;
     /**
      * Intelligence required to read it.
      */
-    int intel;
+    int intel = 0;
     /**
      * How long, in 10-turns (aka minutes), it takes to read.
      * "To read" means getting 1 skill point, not all of them.
      */
-    int time;
+    int time = 0;
     /**
      * Fun books have chapters; after all are read, the book is less fun.
      */
-    int chapters;
+    int chapters = 0;
     /**
      * What recipes can be learned from this book.
-     * Key is the recipe, value is skill level (of the main skill of the recipes) that is required
-     * to learn the recipe.
      */
-    std::map<const recipe *, int> recipes;
-    /**
-     * Special effects that can happen after the item has been read. May be empty.
-     */
-    std::vector<use_function> use_methods;
+    struct recipe_with_description_t {
+        /**
+         * The recipe that can be learned (never null).
+         */
+        const class recipe *recipe;
+        /**
+         * The skill level required to learn the recipe.
+         */
+        int skill_level;
+        /**
+         * The name for the recipe as it appears in the book.
+         */
+        std::string name;
+        /**
+         * Hidden means it does not show up in the description of the book.
+         */
+        bool hidden;
+        bool operator<( const recipe_with_description_t &rhs ) const
+        {
+            return recipe < rhs.recipe;
+        }
+        bool is_hidden() const
+        {
+            return hidden;
+        }
+    };
+    typedef std::set<recipe_with_description_t> recipe_list_t;
+    recipe_list_t recipes;
+};
 
-    islot_book()
-    : skill( nullptr )
-    , level( 0 )
-    , req( 0 )
-    , fun( 0 )
-    , intel( 0 )
-    , time( 0 )
-    , chapters( 0 )
-    , recipes()
-    , use_methods()
-    {
-    }
+struct islot_mod {
+    /** If non-empty restrict mod to items with those base (before modifiers) ammo types */
+    std::set<ammotype> acceptable_ammo;
+
+    /** If set modifies parent ammo to this type */
+    ammotype ammo_modifier = ammotype::NULL_ID();
+
+    /** If non-empty replaces the compatible magazines for the parent item */
+    std::map< ammotype, std::set<itype_id> > magazine_adaptor;
+
+    /** Proportional adjustment of parent item ammo capacity */
+    float capacity_multiplier = 1.0;
 };
 
 /**
@@ -204,97 +325,103 @@ struct islot_book {
  */
 struct common_ranged_data {
     /**
-     * Armor-pierce bonus from gun.
+     * Damage, armor piercing and multipliers for each.
+     * If multipliers are set on both gun and ammo, values will be normalized
+     * as in @ref damage_instance::add_damage
      */
-    int pierce;
+    damage_instance damage;
     /**
      * Range bonus from gun.
      */
-    int range;
-    /**
-     * Damage bonus from gun.
-     */
-    int damage;
+    int range = 0;
     /**
      * Dispersion "bonus" from gun.
      */
-    int dispersion;
+    int dispersion = 0;
     /**
-     * Recoil "bonus" from gun.
-     */
-    int recoil;
-
-    common_ranged_data()
-    : pierce( 0 )
-    , range( 0 )
-    , damage( 0 )
-    , dispersion( 0 )
-    , recoil( 0 )
-    {
-    }
+     * Legacy pierce and damage values, used if @ref damage isn't set.
+    *@{*/
+    int legacy_pierce = 0;
+    int legacy_damage = 0;
+    /*@}*/
 };
 
-/**
- * Common data for things that affect firing: guns and gunmods.
- * The values of the gun itself and its mods are usually summed up in the item class
- * and the sum is used.
- */
-struct common_firing_data : public common_ranged_data {
-    /**
-     * TODO: this needs documentation, who knows what it is?
-     * A value of -1 in gunmods means it's ignored.
-     */
-    int sight_dispersion;
-    /**
-     * TODO: this needs documentation, who knows what it is?
-     * A value of -1 in gunmods means it's ignored.
-     */
-    int aim_speed;
-    /**
-     * Burst size.
-     */
-    int burst;
-    /**
-     * Clip size. Note that on some gunmods it means relative (in percent) of the
-     * guns main magazine.
-     */
-    int clip;
-    /**
-     * TODO: document me
-     */
-    int loudness;
+struct islot_engine
+{
+    friend Item_factory;
+    friend item;
 
-    common_firing_data()
-    : common_ranged_data()
-    , sight_dispersion( 0 )
-    , aim_speed( 0 )
-    , burst( 0 )
-    , clip( 0 )
-    , loudness( 0 )
-    {
-    }
+    public:
+        /** for combustion engines the displacement (cc) */
+        int displacement = 0;
+
+    private:
+        /** What faults (if any) can occur */
+        std::set<fault_id> faults;
+};
+
+struct islot_wheel
+{
+    public:
+        /** diameter of wheel (inches) */
+        int diameter = 0;
+
+        /** width of wheel (inches) */
+        int width = 0;
+};
+
+struct islot_fuel
+{
+    public:
+        /** Energy of the fuel (kilojoules per charge) */
+        float energy = 0.0f;
 };
 
 // TODO: this shares a lot with the ammo item type, merge into a separate slot type?
-struct islot_gun : public common_firing_data {
+struct islot_gun : common_ranged_data {
+    /**
+     * What skill this gun uses.
+     */
+    skill_id skill_used = skill_id::NULL_ID();
     /**
      * What type of ammo this gun uses.
      */
-    ammotype ammo;
-    /**
-     * What skill this gun uses.
-     * TODO: This is also indicates the type of gun (handgun/rifle/etc.) - that
-     * should probably be made explicit.
-     */
-    const Skill* skill_used;
+    ammotype ammo = ammotype::NULL_ID();
     /**
      * Gun durability, affects gun being damaged during shooting.
      */
-    int durability;
+    int durability = 0;
     /**
-     * Reload time.
+     * For guns with an integral magazine what is the capacity?
      */
-    int reload_time;
+    int clip = 0;
+    /**
+     * Reload time, in moves.
+     */
+    int reload_time = 100;
+    /**
+     * Noise displayed when reloading the weapon.
+     */
+    std::string reload_noise = translate_marker( "click." );
+    /**
+     * Volume of the noise made when reloading this weapon.
+     */
+    int reload_noise_volume = 0;
+
+    /** Maximum aim achievable using base weapon sights */
+    int sight_dispersion = 120;
+
+    /** Modifies base loudness as provided by the currently loaded ammo */
+    int loudness = 0;
+
+    /**
+     * If this uses UPS charges, how many (per shoot), 0 for no UPS charges at all.
+     */
+    int ups_charges = 0;
+    /**
+     * Length of gun barrel, if positive allows sawing down of the barrel
+     */
+    units::volume barrel_length = 0;
     /**
      * Effects that are applied to the ammo when fired.
      */
@@ -304,257 +431,356 @@ struct islot_gun : public common_firing_data {
      * Key is the location (untranslated!), value is the number of mods
      * that the location can have. The value should be > 0.
      */
-    std::map<std::string, int> valid_mod_locations;
+    std::map<gunmod_location, int> valid_mod_locations;
     /**
-     * If this uses UPS charges, how many (per shoot), 0 for no UPS charges at all.
-     */
-    int ups_charges;
+    *Built in mods. string is id of mod. These mods will get the IRREMOVABLE flag set.
+    */
+    std::set<itype_id> built_in_mods;
+    /**
+    *Default mods, string is id of mod. These mods are removable but are default on the weapon.
+    */
+    std::set<itype_id> default_mods;
 
-    islot_gun()
-    : common_firing_data()
-    , skill_used( nullptr )
-    , durability( 0 )
-    , reload_time( 0 )
-    , ammo_effects()
-    , valid_mod_locations()
-    , ups_charges( 0 )
-    {
-    }
+    /** Firing modes are supported by the gun. Always contains at least DEFAULT mode */
+    std::map<gun_mode_id, gun_modifier_data> modes;
+
+    /** Burst size for AUTO mode (legacy field for items not migrated to specify modes ) */
+    int burst = 0;
+
+    /** How easy is control of recoil? If unset value automatically derived from weapon type */
+    int handling = -1;
+
+    /**
+     *  Additional recoil applied per shot before effects of handling are considered
+     *  @note useful for adding recoil effect to guns which otherwise consume no ammo
+     */
+    int recoil = 0;
 };
 
-struct islot_gunmod : public common_firing_data {
-    /**
-     * TODO: document me
-     */
-    int req_skill;
-    /**
-     * TODO: document me
-     * TODO: this should be a pointer to const Skill.
-     */
-    const Skill* skill_used;
-    /**
-     * TODO: document me
-     */
-    ammotype newtype;
-    /**
-     * TODO: document me
-     */
-    std::set<std::string> acceptible_ammo_types;
-    /**
-     * TODO: document me
-     */
-    bool used_on_pistol;
-    /**
-     * TODO: document me
-     */
-    bool used_on_shotgun;
-    /**
-     * TODO: document me
-     */
-    bool used_on_smg;
-    /**
-     * TODO: document me
-     */
-    bool used_on_rifle;
-    /**
-     * TODO: document me
-     */
-    bool used_on_bow;
-    /**
-     * TODO: document me
-     */
-    bool used_on_crossbow;
-    /**
-     * TODO: document me
-     */
-    bool used_on_launcher;
-    /**
-     * TODO: document me
-     */
-    std::string location;
+/// The type of gun. The second "_type" suffix is only to distinguish it from `item::gun_type`.
+class gun_type_type
+{
+    private:
+        std::string name_;
 
-    islot_gunmod()
-    : common_firing_data()
-    , req_skill( 0 )
-    , skill_used( nullptr )
-    , newtype()
-    , acceptible_ammo_types()
-    , used_on_pistol( false )
-    , used_on_shotgun( false )
-    , used_on_smg( false )
-    , used_on_rifle( false )
-    , used_on_bow( false )
-    , used_on_crossbow( false )
-    , used_on_launcher( false )
-    , location()
-    {
-    }
+    public:
+        /// @param name The untranslated name of the gun type. Must have been extracted
+        /// for translation with the context "gun_type_type".
+        gun_type_type( const std::string &name ) : name_( name ) {}
+        // arbitrary sorting, only here to allow usage in std::set
+        bool operator<( const gun_type_type &rhs ) const {
+            return name_ < rhs.name_;
+        }
+        /// Translated name.
+        std::string name() const;
 };
 
-struct islot_ammo : public common_ranged_data {
+struct islot_gunmod : common_ranged_data {
+    /** Where is this gunmod installed (e.g. "stock", "rail")? */
+    gunmod_location location;
+
+    /** What kind of weapons can this gunmod be used with (e.g. "rifle", "crossbow")? */
+    std::set<gun_type_type> usable;
+
+    /** If this value is set (non-negative), this gunmod functions as a sight. A sight is only usable to aim by a character whose current @ref Character::recoil is at or below this value. */
+    int sight_dispersion = -1;
+
     /**
-     * Ammo type, basically the "form" of the the ammo that fits into the gun/tool.
-     * This is an id, it can be looked up in the @ref ammunition_type class.
+     *  For sights (see @ref sight_dispersion), this value affects time cost of aiming.
+     *  Higher is better. In case of multiple usable sights,
+     *  the one with highest aim speed is used.
      */
-    ammotype type;
+    int aim_speed = -1;
+
+    /** Modifies base loudness as provided by the currently loaded ammo */
+    int loudness = 0;
+
+    /** How many moves does this gunmod take to install? */
+    int install_time = 0;
+
+    /** Increases base gun UPS consumption by this many charges per shot */
+    int ups_charges = 0;
+
+    /** Firing modes added to or replacing those of the base gun */
+    std::map<gun_mode_id, gun_modifier_data> mode_modifier;
+
+    std::set<std::string> ammo_effects;
+
+    /** Relative adjustment to base gun handling */
+    int handling = 0;
+};
+
+struct islot_magazine {
+    /** What type of ammo this magazine can be loaded with */
+    ammotype type = ammotype::NULL_ID();
+
+    /** Capacity of magazine (in equivalent units to ammo charges) */
+    int capacity = 0;
+
+    /** Default amount of ammo contained by a magazine (often set for ammo belts) */
+    int count = 0;
+
+    /** Default type of ammo contained by a magazine (often set for ammo belts) */
+    itype_id default_ammo = "NULL";
+
     /**
-     * Type id of casings, can be "NULL" for no casings at all.
+     * How reliable this magazine on a range of 0 to 10?
+     * @see doc/GAME_BALANCE.md
      */
-    itype_id casing;
+    int reliability = 0;
+
+    /** How long it takes to load each unit of ammo into the magazine */
+    int reload_time = 100;
+
+    /** For ammo belts one linkage (of given type) is dropped for each unit of ammo consumed */
+    itype_id linkage = "NULL";
+
+    /** If false, ammo will cook off if this mag is affected by fire */
+    bool protects_contents = false;
+};
+
+struct islot_ammo : common_ranged_data {
+    /**
+     * Ammo type, basically the "form" of the ammo that fits into the gun/tool.
+     */
+    std::set<ammotype> type;
+    /**
+     * Type id of casings, can be "null" for no casings at all.
+     */
+    std::string casing = "null";
     /**
      * Default charges.
      */
-    long def_charges;
+
+    /**
+     * Control chance for and state of any items dropped at ranged target
+     *@{*/
+    itype_id drop = "null";
+
+    float drop_chance = 1.0;
+
+    bool drop_active = true;
+    /*@}*/
+
+    long def_charges = 1;
     /**
      * TODO: document me.
      */
     std::set<std::string> ammo_effects;
-
-    islot_ammo()
-    : common_ranged_data()
-    , type()
-    , casing( "NULL" )
-    , def_charges( 0 )
-    , ammo_effects()
-    {
-    }
-};
-
-struct islot_variable_bigness {
     /**
-     * Minimal value of the bigness value of items of this type.
+     * Base loudness of ammo (possibly modified by gun/gunmods). If unspecified an
+     * appropriate value is calculated based upon the other properties of the ammo
      */
-    int min_bigness;
-    /**
-     * Maximal value of the bigness value of items of this type.
-     */
-    int max_bigness;
-    /**
-     * What the bigness actually represent see @ref bigness_property_aspect
-     */
-    bigness_property_aspect bigness_aspect;
+    int loudness = -1;
 
-    islot_variable_bigness()
-    : min_bigness( 0 )
-    , max_bigness( 0 )
-    , bigness_aspect( BIGNESS_ENGINE_DISPLACEMENT )
-    {
-    }
+    /** Recoil (per shot), roughly equivalent to kinetic energy (in Joules) */
+    int recoil = 0;
+
+    /**
+     * Should this ammo explode in fire?
+     * This value is cached by item_factory based on ammo_effects and item material.
+     * @warning It is not read from the json directly.
+     */
+    bool cookoff = false;
+
+    /**
+     * Should this ammo apply a special explosion effect when in fire?
+     * This value is cached by item_factory based on ammo_effects and item material.
+     * @warning It is not read from the json directly.
+     * */
+    bool special_cookoff = false;
 };
 
 struct islot_bionic {
     /**
      * Arbitrary difficulty scale, see bionics.cpp for its usage.
      */
-    int difficulty;
+    int difficulty = 0;
     /**
-     * Id of the bionic, see @ref bionics.
+     * Id of the bionic, see bionics.cpp for its usage.
      */
-    std::string bionic_id;
-
-    islot_bionic()
-    : difficulty( 0 )
-    , bionic_id()
-    {
-    }
+    bionic_id id;
 };
 
-struct islot_software {
+struct islot_seed {
     /**
-     * Type of software, see enum.
+     * Time it takes for a seed to grow (based of off a season length of 91 days).
      */
-    software_type swtype;
+    time_duration grow = 0;
+    /**
+     * Amount of harvested charges of fruits is divided by this number.
+     */
+    int fruit_div = 1;
+    /**
+     * Name of the plant, already translated.
+     */
+    std::string plant_name;
+    /**
+     * Type id of the fruit item.
+     */
+    std::string fruit_id;
+    /**
+     * Whether to spawn seed items additionally to the fruit items.
+     */
+    bool spawn_seeds = true;
+    /**
+     * Additionally items (a list of their item ids) that will spawn when harvesting the plant.
+     */
+    std::vector<std::string> byproducts;
 
-    islot_software()
-    : swtype( SW_USELESS )
-    {
-    }
+    islot_seed() { }
 };
 
-// Data used when spawning items, should be obsoleted by the spawn system, but
-// is still used at several places and makes it easier when it applies to all new items of a type.
-struct islot_spawn {
-    itype_id default_container; // The container it comes in
-    std::vector<long> rand_charges;
-
-    islot_spawn()
-    : default_container( "null" )
-    , rand_charges()
-    {
-    }
+struct islot_artifact {
+    art_charge charge_type;
+    std::vector<art_effect_passive> effects_wielded;
+    std::vector<art_effect_active>  effects_activated;
+    std::vector<art_effect_passive> effects_carried;
+    std::vector<art_effect_passive> effects_worn;
 };
 
 struct itype {
-    itype_id id; // unique string identifier for this item,
-    // can be used as lookup key in master itype map
-    // Used for save files; aligns to itype_id above.
-    unsigned int  price; // Its value
+    friend class Item_factory;
 
     /**
      * Slots for various item type properties. Each slot may contain a valid pointer or null, check
      * this before using it.
      */
     /*@{*/
-    std::unique_ptr<islot_container> container;
-    std::unique_ptr<islot_armor> armor;
-    std::unique_ptr<islot_book> book;
-    std::unique_ptr<islot_gun> gun;
-    std::unique_ptr<islot_gunmod> gunmod;
-    std::unique_ptr<islot_variable_bigness> variable_bigness;
-    std::unique_ptr<islot_bionic> bionic;
-    std::unique_ptr<islot_software> software;
-    std::unique_ptr<islot_spawn> spawn;
-    std::unique_ptr<islot_ammo> ammo;
+    cata::optional<islot_container> container;
+    cata::optional<islot_tool> tool;
+    cata::optional<islot_comestible> comestible;
+    cata::optional<islot_brewable> brewable;
+    cata::optional<islot_armor> armor;
+    cata::optional<islot_book> book;
+    cata::optional<islot_mod> mod;
+    cata::optional<islot_engine> engine;
+    cata::optional<islot_wheel> wheel;
+    cata::optional<islot_fuel> fuel;
+    cata::optional<islot_gun> gun;
+    cata::optional<islot_gunmod> gunmod;
+    cata::optional<islot_magazine> magazine;
+    cata::optional<islot_bionic> bionic;
+    cata::optional<islot_ammo> ammo;
+    cata::optional<islot_seed> seed;
+    cata::optional<islot_artifact> artifact;
     /*@}*/
 
 protected:
-    friend class Item_factory;
+    std::string id = "null"; /** unique string identifier for this type */
+
     // private because is should only be accessed through itype::nname!
     // name and name_plural are not translated automatically
     // nname() is used for display purposes
-    std::string name;        // Proper name, singular form, in American English.
-    std::string name_plural; // name, plural form, in American English.
+    std::string name = "none";        // Proper name, singular form, in American English.
+    std::string name_plural = "none"; // name, plural form, in American English.
+
+    /** If set via JSON forces item category to this (preventing automatic assignment) */
+    std::string category_force;
+
 public:
+    itype() {
+        melee.fill( 0 );
+    }
+
+    std::string snippet_category;
     std::string description; // Flavor text
 
-    char sym;       // Symbol on the map
-    nc_color color; // Color on the map (color.h)
+    std::string default_container = "null"; // The container it comes in
+
+    std::map<quality_id, int> qualities; //Tool quality indicators
+    std::map<std::string, std::string> properties;
 
     // What we're made of (material names). .size() == made of nothing.
     // MATERIALS WORK IN PROGRESS.
-    std::vector<std::string> materials;
+    std::vector<material_id> materials;
 
-    phase_id phase; //e.g. solid, liquid, gas
+    /** Actions an instance can perform (if any) indexed by action type */
+    std::map<std::string, use_function> use_methods;
 
-    unsigned int volume; // Space taken up by this item
-    int stack_size;      // How many things make up the above-defined volume (eg. 100 aspirin = 1 volume)
-    unsigned int weight; // Weight in grams. Assumes positive weight. No helium, guys!
-    std::map<std::string, int> qualities; //Tool quality indicators
-    std::map<std::string, std::string> properties;
+    /** Default countdown interval (if any) for item */
+    int countdown_interval = 0;
 
-    // Explosion that happens when the item is set on fire
-    explosion_data explosion_on_fire_data;
-    bool explode_in_fire() const
-    {
-        return explosion_on_fire_data.power >= 0;
-    }
+    /** Action to take when countdown expires */
+    use_function countdown_action;
 
-    signed int melee_dam; // Bonus for melee damage; may be a penalty
-    signed int melee_cut; // Cutting damage in melee
-    signed int m_to_hit;  // To-hit bonus for melee combat; -5 to 5 is reasonable
+    /** Is item destroyed after the countdown action is run? */
+    bool countdown_destroy = false;
+
+    /** Action to take BEFORE the item is placed on map. If it returns non-zero, item won't be placed. */
+    use_function drop_action;
+
+    /** Fields to emit when item is in active state */
+    std::set<emit_id> emits;
 
     std::set<std::string> item_tags;
-    std::set<std::string> techniques;
+    std::set<matec_id> techniques;
 
-    unsigned int light_emission;   // Exactly the same as item_tags LIGHT_*, this is for lightmap.
+    // Minimum stat(s) or skill(s) to use the item
+    int min_str = 0;
+    int min_dex = 0;
+    int min_int = 0;
+    int min_per = 0;
+    std::map<skill_id, int> min_skills;
 
-    const item_category *category; // category pointer or NULL for automatic selection
+    // Should the item explode when lit on fire
+    bool explode_in_fire = false;
+    // How should the item explode
+    explosion_data explosion;
 
-    std::string snippet_category;
+    phase_id phase      = SOLID; // e.g. solid, liquid, gas
 
-    virtual std::string get_item_type_string() const
+    /** Can item be combined with other identical items? */
+    bool stackable = false;
+
+    /** After loading from JSON these properties guaranteed to be zero or positive */
+    /*@{*/
+    units::mass weight  =  0; // Weight for item ( or each stack member )
+    units::volume volume = 0; // Space occupied by items of this type
+    int price           =  0; // Value before cataclysm
+    int price_post      = -1; // Value after cataclysm (dependent upon practical usages)
+    int stack_size      =  0; // Maximum identical items that can stack per above unit volume
+    units::volume integral_volume = units::from_milliliter( -1 ); // Space consumed when integrated as part of another item (defaults to volume)
+    /*@}*/
+
+    bool rigid = true; // If non-rigid volume (and if worn encumbrance) increases proportional to contents
+
+    /** Damage output in melee for zero or more damage types */
+    std::array<int, NUM_DT> melee;
+    /** Base damage output when thrown */
+    damage_instance thrown_damage;
+
+    int m_to_hit  = 0;  // To-hit bonus for melee combat; -5 to 5 is reasonable
+
+    unsigned light_emission = 0;   // Exactly the same as item_tags LIGHT_*, this is for lightmap.
+
+    const item_category *category = nullptr; // category pointer or NULL for automatic selection
+
+    nc_color color = c_white; // Color on the map (color.h)
+    std::string sym;
+
+    int damage_min = -1; /** Minimum amount of damage to an item (state of maximum repair) */
+    int damage_max =  4; /** Maximum amount of damage to an item (state before destroyed) */
+
+    /** What items can be used to repair this item? @see Item_factory::finalize */
+    std::set<itype_id> repair;
+
+    /** Magazine types (if any) for each ammo type that can be used to reload this item */
+    std::map< ammotype, std::set<itype_id> > magazines;
+
+    /** Default magazine for each ammo type that can be used to reload this item */
+    std::map< ammotype, itype_id > magazine_default;
+
+    /** Volume above which the magazine starts to protrude from the item and add extra volume */
+    units::volume magazine_well = 0;
+
+    std::string get_item_type_string() const
     {
-        if( container ) {
+        if( tool ) {
+            return "TOOL";
+        } else if( comestible ) {
+            return "FOOD";
+        } else if( container ) {
             return "CONTAINER";
         } else if( armor ) {
             return "ARMOR";
@@ -562,8 +788,6 @@ public:
             return "BOOK";
         } else if( gun ) {
             return "GUN";
-        } else if( variable_bigness ) {
-            return "VEHICLE_PART";
         } else if( bionic ) {
             return "BIONIC";
         } else if( ammo ) {
@@ -574,147 +798,52 @@ public:
 
     // Returns the name of the item type in the correct language and with respect to its grammatical number,
     // based on quantity (example: item type “anvil”, nname(4) would return “anvils” (as in “4 anvils”).
-    virtual std::string nname(unsigned int quantity) const
-    {
-        return ngettext(name.c_str(), name_plural.c_str(), quantity);
+    std::string nname(unsigned int quantity) const;
+
+    // Allow direct access to the type id for the few cases that need it.
+    itype_id get_id() const {
+        return id;
     }
 
-    virtual bool is_food() const
-    {
-        return false;
-    }
-    virtual bool is_tool() const
-    {
-        return false;
-    }
-    virtual bool is_artifact() const
-    {
-        return false;
-    }
-    virtual bool count_by_charges() const
-    {
-        if( ammo ) {
-            return true;
+    bool count_by_charges() const { return stackable; }
+
+    int charges_default() const {
+        if( tool ) {
+            return tool->def_charges;
+        } else if( comestible ) {
+            return comestible->def_charges;
+        } else if( ammo ) {
+            return ammo->def_charges;
         }
-        return false;
+        return stackable ? 1 : 0;
     }
-    virtual int charges_to_use() const
+
+    int charges_to_use() const
     {
+        if( tool ) {
+            return tool->charges_per_use;
+        }
         return 1;
     }
-    virtual int maximum_charges() const
+
+    int maximum_charges() const
     {
+        if( tool ) {
+            return tool->max_charges;
+        }
         return 1;
     }
 
     bool has_use() const;
     bool can_use( const std::string &iuse_name ) const;
     const use_function *get_use( const std::string &iuse_name ) const;
-    int invoke( player *p, item *it, bool active, point pos );
 
-    std::vector<use_function> use_methods;// Special effects of use
+    // Here "invoke" means "actively use". "Tick" means "active item working"
+    long invoke( player &p, item &it, const tripoint &pos ) const; // Picks first method or returns 0
+    long invoke( player &p, item &it, const tripoint &pos, const std::string &iuse_name ) const;
+    long tick( player &p, item &it, const tripoint &pos ) const;
 
-    itype() : id("null"), price(0), name("none"), name_plural("none"), description(), sym('#'),
-        color(c_white), phase(SOLID), volume(0), stack_size(0),
-        weight(0), qualities(),
-        melee_dam(0), melee_cut(0), m_to_hit(0), item_tags(), techniques(), light_emission(),
-        category(NULL)
-    {}
-
-    itype(std::string pid, unsigned int pprice, std::string pname, std::string pname_plural,
-          std::string pdes, char psym, nc_color pcolor, std::vector<std::string> pmaterials,
-          phase_id pphase, unsigned int pvolume, unsigned int pweight, signed int pmelee_dam,
-          signed int pmelee_cut, signed int pm_to_hit) : id(pid), price(pprice), name(pname),
-        name_plural(pname_plural), description(pdes), sym(psym), color(pcolor), materials(pmaterials),
-        phase(pphase), volume(pvolume), stack_size(0), weight(pweight),
-        qualities(), melee_dam(pmelee_dam),
-        melee_cut(pmelee_cut), m_to_hit(pm_to_hit), item_tags(), techniques(), light_emission(),
-        category(NULL) { }
-
-    virtual ~itype() {}
-};
-
-// Includes food drink and drugs
-struct it_comest : public virtual itype {
-    signed int quench;     // Many things make you thirstier!
-    unsigned int nutr;     // Nutrition imparted
-    /**
-     * How long it takes to spoil (turns), rotten food is handled differently
-     * (chance of bad thinks happen when eating etc).
-     * If 0, the food never spoils.
-     */
-    int spoils;
-    unsigned int addict;   // Addictiveness potential
-    long def_charges;  // Defaults # of charges (drugs, loaf of bread? etc)
-    signed int stim;
-    signed int healthy;
-    unsigned int brewtime; // How long it takes for a brew to ferment.
-    std::string comesttype; //FOOD, DRINK, MED
-
-    signed int fun;    // How fun its use is
-
-    unsigned int grow; //time it takes for a seed to grow (in days, based of off a season length of 91)
-    itype_id tool;      // Tool needed to consume (e.g. lighter for cigarettes)
-
-    virtual bool is_food() const
-    {
-        return true;
-    }
-    virtual std::string get_item_type_string() const
-    {
-        return "FOOD";
-    }
-
-    virtual bool count_by_charges() const
-    {
-        if (phase == LIQUID) {
-            return true;
-        } else {
-            return def_charges > 1 ;
-        }
-    }
-
-    add_type add; // Effects of addiction
-
-    it_comest(): itype(), quench(0), nutr(0), def_charges(0), stim(0), healthy(0),
-        brewtime(0), comesttype(), fun(0), tool()
-    {
-    }
-};
-
-struct it_tool : public virtual itype {
-    ammotype ammo;
-    long max_charges;
-    long def_charges;
-    unsigned char charges_per_use;
-    unsigned char turns_per_charge;
-    itype_id revert_to;
-    itype_id subtype;
-
-    virtual bool is_tool() const
-    {
-        return true;
-    }
-    virtual bool is_artifact() const
-    {
-        return false;
-    }
-    virtual std::string get_item_type_string() const
-    {
-        return "TOOL";
-    }
-    int charges_to_use() const
-    {
-        return charges_per_use;
-    }
-    int maximum_charges() const
-    {
-        return max_charges;
-    }
-    it_tool() : itype(), ammo(), max_charges(0), def_charges(0), charges_per_use(0),
-        turns_per_charge(0), revert_to(), subtype()
-    {
-    }
+    virtual ~itype() = default;
 };
 
 #endif

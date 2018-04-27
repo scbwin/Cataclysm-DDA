@@ -1,145 +1,85 @@
 #include "live_view.h"
+
 #include "output.h"
 #include "game.h"
-#include "options.h"
+#include "string_formatter.h"
+#include "map.h"
+#include "translations.h"
+#include "catacharset.h" // center_text_pos
+#include "color.h"
 
-#define START_LINE 1
-#define START_COLUMN 1
+#if (defined TILES || defined _WIN32 || defined WINDOWS)
+#include "cursesport.h"
+#endif
 
-live_view::live_view() : compact_view(false), w_live_view(NULL),
-    enabled(false), inuse(false), last_height(-1)
+#include <algorithm> // min & max
+#include <string>
+
+namespace
 {
 
-}
+constexpr int START_LINE = 1;
+constexpr int START_COLUMN = 1;
+constexpr int MIN_BOX_HEIGHT = 11;
 
-live_view::~live_view()
+} //namespace
+
+void live_view::init()
 {
-    delwin(w_live_view);
-}
-
-void live_view::init(int start_x, int start_y, int width, int height)
-{
-    enabled = true;
-    if (w_live_view != NULL) {
-        delwin(w_live_view);
-    }
-
-    this->width = width;
-    this->height = height;
-    w_live_view = newwin(height, width, start_y, start_x);
     hide();
 }
 
-void live_view::show(const int x, const int y)
+int live_view::draw( const catacurses::window &win, int const max_height )
 {
-    if (!enabled || w_live_view == NULL) {
-        return;
+    if( !enabled ) {
+        return 0;
     }
 
-    bool did_hide = hide(false); // Clear window if it's visible
+    // -1 for border. -1 because getmaxy() actually returns height, not y position.
+    const int line_limit = max_height - 2;
+    const visibility_variables &cache = g->m.get_visibility_variables_cache();
+    int line_out = START_LINE;
+    g->print_all_tile_info( mouse_position, win, START_COLUMN, line_out,
+                            line_limit, false, cache );
 
-    if (!g->u.sees(x, y)) {
-        if (did_hide) {
-            wrefresh(w_live_view);
-        }
-        return;
-    }
+    const int live_view_box_height = std::min( max_height, std::max( line_out + 1, MIN_BOX_HEIGHT ) );
 
-    map &m = g->m;
-    mvwprintz(w_live_view, 0, START_COLUMN, c_white, "< ");
-    wprintz(w_live_view, c_green, _("Mouse View"));
-    wprintz(w_live_view, c_white, " >");
-    int line = START_LINE;
-
-    g->print_all_tile_info(x, y, w_live_view, START_COLUMN, line, true);
-
-    if (m.can_put_items(x, y) && m.sees_some_items(x, y, g->u)) {
-        if(g->u.has_effect("blind")) {
-            mvwprintz(w_live_view, line++, START_COLUMN, c_yellow,
-                      _("There's something here, but you can't see what it is."));
-        } else {
-            print_items(m.i_at(x, y), line);
-        }
-    }
-
-#if (defined TILES || defined SDLTILES || defined _WIN32 || defined WINDOWS)
+#if (defined TILES || defined _WIN32 || defined WINDOWS)
     // Because of the way the status UI is done, the live view window must
     // be tall enough to clear the entire height of the viewport below the
     // status bar. This hack allows the border around the live view box to
     // be drawn only as big as it needs to be, while still leaving the
     // window tall enough. Won't work for ncurses in Linux, but that doesn't
-    // currently support the mouse. If and when it does, there'll need to
+    // currently support the mouse. If and when it does, there will need to
     // be a different code path here that works for ncurses.
-    int full_height = w_live_view->height;
-    if (line < w_live_view->height - 1) {
-        w_live_view->height = (line > 11) ? line : 11;
-    }
-    last_height = w_live_view->height;
+    const int original_height = win.get<cata_cursesport::WINDOW>()->height;
+    win.get<cata_cursesport::WINDOW>()->height = live_view_box_height;
 #endif
 
-    draw_border(w_live_view);
+    draw_border( win );
+    static const char *title_prefix = "< ";
+    static const char *title = _( "Mouse View" );
+    static const char *title_suffix = " >";
+    static const std::string full_title = string_format( "%s%s%s", title_prefix, title, title_suffix );
+    const int start_pos = center_text_pos( full_title.c_str(), 0, getmaxx( win ) - 1 );
+    mvwprintz( win, 0, start_pos, c_white, title_prefix );
+    wprintz( win, c_green, title );
+    wprintz( win, c_white, title_suffix );
 
-#if (defined TILES || defined SDLTILES || defined _WIN32 || defined WINDOWS)
-    w_live_view->height = full_height;
+#if (defined TILES || defined _WIN32 || defined WINDOWS)
+    win.get<cata_cursesport::WINDOW>()->height = original_height;
 #endif
 
-    inuse = true;
-    wrefresh(w_live_view);
+    return live_view_box_height;
 }
 
-bool live_view::hide(bool refresh /*= true*/, bool force /*= false*/)
+void live_view::hide()
 {
-    if (!enabled || (!inuse && !force)) {
-        return false;
-    }
-
-#if (defined TILES || defined SDLTILES || defined _WIN32 || defined WINDOWS)
-    int full_height = w_live_view->height;
-    if (use_narrow_sidebar() && last_height > 0) {
-        // When using the narrow sidebar mode, the lower part of the screen
-        // is used for the message queue. Best not to obscure too much of it.
-        w_live_view->height = last_height;
-    }
-#endif
-
-    werase(w_live_view);
-
-#if (defined TILES || defined SDLTILES || defined _WIN32 || defined WINDOWS)
-    w_live_view->height = full_height;
-#endif
-
-    inuse = false;
-    last_height = -1;
-    if (refresh) {
-        wrefresh(w_live_view);
-    }
-
-    return true;
+    enabled = false;
 }
 
-void live_view::print_items(const map_stack &items, int &line) const
+void live_view::show( const tripoint &p )
 {
-    std::map<std::string, int> item_names;
-    for( auto &item : items ) {
-        std::string name = item.tname();
-        if (item_names.find(name) == item_names.end()) {
-            item_names[name] = 0;
-        }
-        item_names[name] += 1;
-    }
-
-    int last_line = height - START_LINE - 1;
-    bool will_overflow = line - 1 + (int)item_names.size() > last_line;
-
-    for (std::map<std::string, int>::iterator it = item_names.begin();
-         it != item_names.end() && (!will_overflow || line < last_line); it++) {
-        mvwprintz(w_live_view, line++, START_COLUMN, c_white, it->first.c_str());
-        if (it->second > 1) {
-            wprintz(w_live_view, c_white, _(" [%d]"), it->second);
-        }
-    }
-
-    if (will_overflow) {
-        mvwprintz(w_live_view, line++, START_COLUMN, c_yellow, _("More items here..."));
-    }
+    enabled = true;
+    mouse_position = p;
 }

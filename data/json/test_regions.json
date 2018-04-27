@@ -2,13 +2,8 @@
    {
       "type": "region_settings",
       "id": "desert_test",                  "//": "identifier, when region_map is in it will determine alternatives ('desert' etc)",
-      "house_basement_chance": 2,           "//": "one_in(n) houses with basements",
       "default_oter": "field",              "//": "default oter_id (anything that isn't a house/road/etc) some become forests",
-      "default_groundcover": {              "//": "biome settings for generic 'grass_or_dirt' (which is reproduced below",
-          "primary": "t_searth_test",       "//": "default ter_id on ground",
-          "ratio": 3,                       "//": "one_in(n) chance that it becomes...",
-          "secondary": "t_sand",            "//": "...this instead"
-      },
+      "default_groundcover": [ [ "t_searth_test", 3 ], [ "t_sand", 1 ] ],
       "field_coverage": {                   "//": "biome settings for builtin field mapgen",
           "percent_coverage": 1.9333,       "//": "% of tiles that have a plant: one_in(120)",
           "default_ter": "t_sand",        "//": "default plant. Except this is a desert. Enjoy your rock.",
@@ -36,6 +31,10 @@
           "type": "town",
           "shop_radius": 80,                "//": "tldr: less means more",
           "park_radius": 130,               "//": "this is not a cut and dry % but rather an inverse voodoo number; rng(0,99) > VOODOO * distance / citysize;",
+          "houses": {
+              "house": 1,
+              "house_base": 1
+          },
           "parks": {
               "park": 2,
               "pool": 1
@@ -52,19 +51,23 @@
               "police": 1,
               "s_lot": 6
           }
+      },
+      "weather": {
+          "base_temperature" : 8.0,
+          "base_humidity" : 40.0,
+          "base_pressure" : 1015.0,
+          "base_acid" : 0.0
       }
    },
    {
       "type" : "overmap_terrain",
       "id" : "s_restaurant_deserted_test",
       "name" : "abandoned drive-through",
-      "rotate" : true,
-      "sym" : [94, 62, 118, 60],
-      "color" : "dkgray_magenta",
+      "sym" : 94,
+      "color" : "dark_gray_magenta",
       "see_cost" : 5,
       "extras" : "build",
       "mondensity" : 2,
-      "sidewalk" : true,
       "mapgen": [
           { "weight": 1000,
               "method": "json", "object": {
@@ -96,10 +99,10 @@
                        "   dd                   "
                    ],
                    "terrain":{
-                       " ": "t_null",
+                       " ": "t_sand",
                        "d": "t_floor",
-                       "5": "t_wall_glass_h",
-                       "%": "t_wall_glass_v",
+                       "5": "t_wall_glass",
+                       "%": "t_wall_glass",
                        "O": "t_floor",
                        ",": "t_pavement_y",
                        "_": "t_pavement",
@@ -108,8 +111,8 @@
                        "x": "t_console_broken",
                        "^": "t_floor",
                        ".": "t_floor",
-                       "-": "t_wall_h",
-                       "|": "t_wall_v",
+                       "-": "t_wall",
+                       "|": "t_wall",
                        "#": "t_dirt",
                        "t": "t_floor",
                        "+": "t_door_glass_c",
@@ -142,14 +145,15 @@
                   ]
               }
           }
-      ]
+      ],
+      "flags" : [ "SIDEWALK" ]
    },
    {
       "type" : "terrain",
       "id" : "t_searth_test",
       "name": "scorched earth",
       "symbol": ".",
-      "color": "ltgray",
+      "color": "light_gray",
       "move_cost": 2,
       "flags": ["TRANSPARENT", "DIGGABLE", "FLAT"]
    },

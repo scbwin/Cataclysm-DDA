@@ -1,20 +1,110 @@
+#pragma once
 #ifndef ENUMS_H
 #define ENUMS_H
 
-#include "json.h" // (de)serialization for points
+#include <utility>
+#include <climits>
+#include <ostream>
 
-#ifndef sgn
-#define sgn(x) (((x) < 0) ? -1 : 1)
-#endif
+class JsonOut;
+class JsonIn;
 
-enum special_game_id {
+template<typename T>
+constexpr inline int sgn( const T x )
+{
+    return x < 0 ? -1 : ( x > 0 ? 1 : 0 );
+}
+
+// By default unordered_map doesn't have a hash for tuple or pairs, so we need to include some.
+// This is taken almost directly from the boost library code.
+// Function has to live in the std namespace
+// so that it is picked up by argument-dependent name lookup (ADL).
+namespace std{
+    namespace
+    {
+
+        // Code from boost
+        // Reciprocal of the golden ratio helps spread entropy
+        //     and handles duplicates.
+        // See Mike Seymour in magic-numbers-in-boosthash-combine:
+        //     http://stackoverflow.com/questions/4948780
+
+        template <class T>
+        inline void hash_combine(std::size_t& seed, T const& v)
+        {
+            seed ^= hash<T>()(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+        }
+
+        // Recursive template code derived from Matthieu M.
+        template <class Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
+        struct HashValueImpl
+        {
+            static void apply(size_t& seed, Tuple const& tuple)
+            {
+                HashValueImpl<Tuple, Index-1>::apply(seed, tuple);
+                hash_combine(seed, get<Index>(tuple));
+            }
+        };
+
+        template <class Tuple>
+        struct HashValueImpl<Tuple,0>
+        {
+            static void apply(size_t& seed, Tuple const& tuple)
+            {
+                hash_combine(seed, get<0>(tuple));
+            }
+        };
+    }
+
+    template <typename ... TT>
+    struct hash<std::tuple<TT...>>
+    {
+        size_t
+        operator()(std::tuple<TT...> const& tt) const
+        {
+            size_t seed = 0;
+            HashValueImpl<std::tuple<TT...> >::apply(seed, tt);
+            return seed;
+        }
+
+    };
+
+    template <class A, class B>
+    struct hash<std::pair<A, B>>
+    {
+        std::size_t operator() (const std::pair<A, B>& v) const {
+            std::size_t seed = 0;
+            hash_combine(seed, v.first);
+            hash_combine(seed, v.second);
+            return seed;
+        }
+    };
+}
+
+//Used for autopickup and safemode rules
+enum rule_state : int {
+    RULE_NONE,
+    RULE_WHITELISTED,
+    RULE_BLACKLISTED
+};
+
+enum visibility_type {
+  VIS_HIDDEN,
+  VIS_CLEAR,
+  VIS_LIT,
+  VIS_BOOMER,
+  VIS_DARK,
+  VIS_BOOMER_DARK
+};
+
+enum special_game_id : int {
     SGAME_NULL = 0,
     SGAME_TUTORIAL,
     SGAME_DEFENSE,
     NUM_SPECIAL_GAMES
 };
 
-enum art_effect_passive {
+enum art_effect_passive : int {
     AEP_NULL = 0,
     // Good
     AEP_STR_UP, // Strength + 4
@@ -23,7 +113,7 @@ enum art_effect_passive {
     AEP_INT_UP, // Intelligence + 4
     AEP_ALL_UP, // All stats + 2
     AEP_SPEED_UP, // +20 speed
-    AEP_IODINE, // Reduces radiation
+    AEP_PBLUE, // Reduces radiation
     AEP_SNAKES, // Summons friendly snakes when you're hit
     AEP_INVISIBLE, // Makes you invisible
     AEP_CLAIRVOYANCE, // See through walls
@@ -56,6 +146,7 @@ enum art_effect_passive {
     AEP_MOVEMENT_NOISE, // Makes noise when you move
     AEP_BAD_WEATHER, // More likely to experience bad weather
     AEP_SICK, // Decreases health over time
+    AEP_CLAIRVOYANCE_PLUS, // See through walls to a larger distance; not bad effect, placement to preserve old saves.
 
     NUM_AEPS
 };
@@ -82,19 +173,7 @@ enum artifact_natural_property {
     ARTPROP_MAX
 };
 
-// for use in category specific inventory lists
-enum item_cat {
-    IC_NULL = 0,
-    IC_COMESTIBLE,
-    IC_AMMO,
-    IC_ARMOR,
-    IC_GUN,
-    IC_BOOK,
-    IC_TOOL,
-    IC_CONTAINER
-};
-
-enum phase_id {
+enum phase_id : int {
     PNULL, SOLID, LIQUID, GAS, PLASMA
 };
 
@@ -116,30 +195,12 @@ enum object_type {
     NUM_OBJECTS,
 };
 
-struct point : public JsonSerializer, public JsonDeserializer {
+struct point {
     int x;
     int y;
-    point(int X = 0, int Y = 0) : x (X), y (Y) {}
-    point(point &&) = default;
-    point(const point &) = default;
-    point &operator=(point &&) = default;
-    point &operator=(const point &) = default;
-    ~point() {}
-    using JsonSerializer::serialize;
-    void serialize(JsonOut &jsout) const
-    {
-        jsout.start_array();
-        jsout.write(x);
-        jsout.write(y);
-        jsout.end_array();
-    }
-    using JsonDeserializer::deserialize;
-    void deserialize(JsonIn &jsin)
-    {
-        JsonArray ja = jsin.get_array();
-        x = ja.get_int(0);
-        y = ja.get_int(1);
-    }
+    point() : x(0), y(0) {}
+    point(int X, int Y) : x (X), y (Y) {}
+
     point operator+(const point &rhs) const
     {
         return point( x + rhs.x, y + rhs.y );
@@ -150,7 +211,20 @@ struct point : public JsonSerializer, public JsonDeserializer {
         y += rhs.y;
         return *this;
     }
+    point operator-(const point &rhs) const
+    {
+        return point( x - rhs.x, y - rhs.y );
+    }
+    point &operator-=(const point &rhs)
+    {
+        x -= rhs.x;
+        y -= rhs.y;
+        return *this;
+    }
 };
+
+void serialize( const point &p, JsonOut &jsout );
+void deserialize( point &p, JsonIn &jsin );
 
 // Make point hashable so it can be used as an unordered_set or unordered_map key,
 // or a component of one.
@@ -181,8 +255,66 @@ struct tripoint {
     int x;
     int y;
     int z;
-    tripoint(int X = 0, int Y = 0, int Z = 0) : x (X), y (Y), z (Z) {}
+    tripoint() : x(0), y(0), z(0) {}
+    tripoint(int X, int Y, int Z) : x (X), y (Y), z (Z) {}
+    explicit tripoint(const point &p, int Z) : x (p.x), y (p.y), z (Z) {}
+
+    tripoint operator+(const tripoint &rhs) const
+    {
+        return tripoint( x + rhs.x, y + rhs.y, z + rhs.z );
+    }
+    tripoint operator-(const tripoint &rhs) const
+    {
+        return tripoint( x - rhs.x, y - rhs.y, z - rhs.z );
+    }
+    tripoint &operator+=(const tripoint &rhs)
+    {
+        x += rhs.x;
+        y += rhs.y;
+        z += rhs.z;
+        return *this;
+    }
+    tripoint operator-() const
+    {
+        return tripoint( -x, -y, -z );
+    }
+    /*** some point operators and functions ***/
+    tripoint operator+(const point &rhs) const
+    {
+        return tripoint(x + rhs.x, y + rhs.y, z);
+    }
+    tripoint operator-(const point &rhs) const
+    {
+        return tripoint(x - rhs.x, y - rhs.y, z);
+    }
+    tripoint &operator+=(const point &rhs)
+    {
+        x += rhs.x;
+        y += rhs.y;
+        return *this;
+    }
+    tripoint &operator-=(const point &rhs)
+    {
+        x -= rhs.x;
+        y -= rhs.y;
+        return *this;
+    }
+    tripoint &operator-=( const tripoint &rhs )
+    {
+        x -= rhs.x;
+        y -= rhs.y;
+        z -= rhs.z;
+        return *this;
+    }
+
+    void serialize( JsonOut &jsout ) const;
+    void deserialize( JsonIn &jsin );
 };
+
+inline std::ostream &operator<<( std::ostream &os, const tripoint &pos )
+{
+    return os << pos.x << "," << pos.y << "," << pos.z;
+}
 
 // Make tripoint hashable so it can be used as an unordered_set or unordered_map key,
 // or a component of one.
@@ -219,5 +351,18 @@ inline bool operator<(const tripoint &a, const tripoint &b)
     }
     return false;
 }
+
+static const tripoint tripoint_min { INT_MIN, INT_MIN, INT_MIN };
+static const tripoint tripoint_zero { 0, 0, 0 };
+
+struct sphere
+{
+    int radius;
+    tripoint center;
+
+    sphere() : radius( 0 ), center() {}
+    explicit sphere( const tripoint &center ) : radius( 1 ), center( center ) {}
+    explicit sphere( const tripoint &center, int radius ) : radius( radius ), center( center ) {}
+};
 
 #endif

@@ -1,159 +1,117 @@
+#pragma once
 #ifndef DIALOGUE_H
 #define DIALOGUE_H
 
-#include "player.h"
-#include "output.h"
-#include "npc.h"
+#include <memory>
 #include <vector>
 #include <string>
+#include <functional>
 
-struct dialogue {
-    player *alpha;
-    npc *beta;
-    WINDOW *win;
-    bool done;
-    std::vector<std::string> history;
-    std::vector<talk_topic> topic_stack;
+class martialart;
+class JsonObject;
+class mission;
+class npc;
+class item;
+struct tripoint;
+class player;
+class npc_template;
+template<typename T>
+class string_id;
 
-    int opt(std::string challenge, ...);
-    talk_topic opt(talk_topic topic);
+namespace talk_function
+{
+void nothing( npc & );
+void assign_mission( npc & );
+void mission_success( npc & );
+void mission_failure( npc & );
+void clear_mission( npc & );
+void mission_reward( npc & );
+void mission_favor( npc & );
+void give_equipment( npc & );
+void give_aid( npc & );
+void give_all_aid( npc & );
 
-    dialogue()
-    {
-        alpha = NULL;
-        beta = NULL;
-        win = NULL;
-        done = false;
-    }
-};
+void bionic_install( npc & );
+void bionic_remove( npc & );
 
-struct talk_function {
-    void nothing              (npc *) {};
-    void assign_mission       (npc *);
-    void mission_success      (npc *);
-    void mission_failure      (npc *);
-    void clear_mission        (npc *);
-    void mission_reward       (npc *);
-    void mission_reward_cash  (npc *);
-    void mission_favor        (npc *);
-    void give_equipment       (npc *);
-    void start_trade          (npc *);
-    std::string bulk_trade_inquire   (npc *, itype_id);
-    void bulk_trade_accept    (npc *, itype_id);
-    void assign_base          (npc *);
-    void assign_guard         (npc *);
-    void stop_guard           (npc *);
-    void end_conversation     (npc *);
-    void insult_combat        (npc *);
-    void reveal_stats         (npc *);
-    void follow               (npc *); // p follows u
-    void deny_follow          (npc *); // p gets "asked_to_follow"
-    void deny_lead            (npc *); // p gets "asked_to_lead"
-    void deny_equipment       (npc *); // p gets "asked_for_item"
-    void deny_train           (npc *); // p gets "asked_to_train"
-    void deny_personal_info   (npc *); // p gets "asked_personal_info"
-    void enslave              (npc *) {}; // p becomes slave of u
-    void hostile              (npc *); // p turns hostile to u
-    void flee                 (npc *);
-    void leave                (npc *); // p becomes indifferant
-    void stranger_neutral     (npc *); // p is now neutral towards you
+void buy_haircut( npc & );
+void buy_shave( npc & );
+void buy_10_logs( npc & );
+void buy_100_logs( npc & );
+void give_equipment( npc & );
+void start_trade( npc & );
+void assign_base( npc & );
+void assign_guard( npc & );
+void stop_guard( npc & );
+void end_conversation( npc & );
+void insult_combat( npc & );
+void reveal_stats( npc & );
+void follow( npc & );                // p follows u
+void deny_follow( npc & );           // p gets "asked_to_follow"
+void deny_lead( npc & );             // p gets "asked_to_lead"
+void deny_equipment( npc & );        // p gets "asked_for_item"
+void deny_train( npc & );            // p gets "asked_to_train"
+void deny_personal_info( npc & );    // p gets "asked_personal_info"
+void hostile( npc & );               // p turns hostile to u
+void flee( npc & );
+void leave( npc & );                 // p becomes indifferent
+void stranger_neutral( npc & );      // p is now neutral towards you
 
-    void start_mugging        (npc *);
-    void player_leaving       (npc *);
+void start_mugging( npc & );
+void player_leaving( npc & );
 
-    void drop_weapon          (npc *);
-    void player_weapon_away   (npc *);
-    void player_weapon_drop   (npc *);
+void drop_weapon( npc & );
+void player_weapon_away( npc & );
+void player_weapon_drop( npc & );
 
-    void lead_to_safety       (npc *);
-    void start_training       (npc *);
+void lead_to_safety( npc & );
+void start_training( npc & );
 
-    void toggle_use_guns      (npc *);
-    void toggle_use_silent    (npc *);
-    void toggle_use_grenades  (npc *);
-    void set_engagement_none  (npc *);
-    void set_engagement_close (npc *);
-    void set_engagement_weak  (npc *);
-    void set_engagement_hit   (npc *);
-    void set_engagement_all   (npc *);
-};
+void wake_up( npc & );
 
-enum talk_trial {
-    TALK_TRIAL_NONE, // No challenge here!
-    TALK_TRIAL_LIE, // Straight up lying
-    TALK_TRIAL_PERSUADE, // Convince them
-    TALK_TRIAL_INTIMIDATE, // Physical intimidation
-    NUM_TALK_TRIALS
-};
-
-struct talk_response {
-    std::string text;
-    talk_trial trial;
-    int difficulty;
-    int mission_index;
-    mission_id miss; // If it generates a new mission
-    int tempvalue; // Used for various stuff
-    const Skill* skill;
-    matype_id style;
-    npc_opinion opinion_success;
-    npc_opinion opinion_failure;
-    void (talk_function::*effect_success)(npc *);
-    void (talk_function::*effect_failure)(npc *);
-    talk_topic success;
-    talk_topic failure;
-
-    talk_response()
-    {
-        text = "";
-        trial = TALK_TRIAL_NONE;
-        difficulty = 0;
-        mission_index = -1;
-        miss = MISSION_NULL;
-        tempvalue = -1;
-        skill = NULL;
-        style = "";
-        effect_success = &talk_function::nothing;
-        effect_failure = &talk_function::nothing;
-        opinion_success = npc_opinion();
-        opinion_failure = npc_opinion();
-        success = TALK_NONE;
-        failure = TALK_NONE;
-    }
-
-    talk_response(const talk_response &rhs)
-    {
-        text = rhs.text;
-        trial = rhs.trial;
-        difficulty = rhs.difficulty;
-        mission_index = rhs.mission_index;
-        miss = rhs.miss;
-        tempvalue = rhs.tempvalue;
-        skill = rhs.skill;
-        style = rhs.style;
-        effect_success = rhs.effect_success;
-        effect_failure = rhs.effect_failure;
-        opinion_success = rhs.opinion_success;
-        opinion_failure = rhs.opinion_failure;
-        success = rhs.success;
-        failure = rhs.failure;
-    }
-};
-
-struct talk_response_list {
-    std::vector<talk_response> none(npc *);
-    std::vector<talk_response> shelter(npc *);
-    std::vector<talk_response> shopkeep(npc *);
-};
-
-/* There is a array of tag_data, "tags", at the bottom of this file.
- * It maps tags to the array of string replacements;
- * e.g. "<name_g>" => talk_good_names
- * Other tags, like "<yrwp>", are mapped to dynamic things
- *  (like the player's weapon), and are defined in parse_tags() (npctalk.cpp)
+/*mission_companion.cpp proves a set of functions that compress all the typical mission operations into a set of hard-coded
+ *unique missions that don't fit well into the framework of the existing system.  These missions typically focus on
+ *sending companions out on simulated adventures or tasks.  This is not meant to be a replacement for the existing system.
  */
-struct tag_data {
-    std::string tag;
-    std::string (*replacement)[10];
+//Identifies which mission set the NPC draws from
+void companion_mission( npc & );
+//Primary Loop
+bool outpost_missions( npc &p, std::string id, std::string title );
+//Send a companion on an individual mission or attaches them to a group to depart later
+void individual_mission( npc &p, std::string desc, std::string id, bool group = false );
+
+void caravan_return( npc &p, std::string dest, std::string id );
+void caravan_depart( npc &p, std::string dest, std::string id );
+int caravan_dist( std::string dest );
+void field_build_1( npc &p );
+void field_build_2( npc &p );
+void field_plant( npc &p, std::string place );
+void field_harvest( npc &p, std::string place );
+bool scavenging_patrol_return( npc &p );
+bool scavenging_raid_return( npc &p );
+bool labor_return( npc &p );
+bool carpenter_return( npc &p );
+bool forage_return( npc &p );
+
+//Combat functions
+void force_on_force( std::vector<std::shared_ptr<npc>> defender, std::string def_desc,
+                     std::vector<std::shared_ptr<npc>> attacker, std::string att_desc, int advantage );
+int combat_score( const std::vector<std::shared_ptr<npc>> &group );    //Used to determine retreat
+void attack_random( const std::vector<std::shared_ptr<npc>> &attacker,
+                    const std::vector<std::shared_ptr<npc>> &defender );
+std::shared_ptr<npc> temp_npc( const string_id<npc_template> &type );
+
+//Utility functions
+/// Returns npcs that have the given companion mission.
+std::vector<std::shared_ptr<npc>> companion_list( const npc &p, const std::string &id );
+npc *companion_choose();
+npc *companion_choose_return( std::string id, int deadline );
+void companion_return( npc &comp );               //Return NPC to your party
+std::vector<item *> loot_building( const tripoint
+                                   site ); //Smash stuff, steal valuables, and change map maker
 };
+
+void unload_talk_topics();
+void load_talk_topic( JsonObject &jo );
 
 #endif

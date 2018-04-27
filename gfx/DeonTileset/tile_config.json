@@ -42,7 +42,6 @@
             "id":"line_trail",
             "fg":288
         },
-
         {
             "id":"animation_line",
             "bg":49
@@ -319,72 +318,37 @@
             "rotates":false
         },
         {
-            "id":"t_wall_v",
+            "id":"t_wall",
             "fg":88,
             "bg":1,
             "rotates":false
         },
         {
-            "id":"t_wall_h",
-            "fg":88,
-            "rotates":false
-        },
-        {
-            "id":"t_concrete_v",
+            "id":"t_concrete_wall",
             "fg":87,
             "bg":1,
             "rotates":false
         },
         {
-            "id":"t_concrete_h",
-            "fg":87,
-            "bg":1,
-            "rotates":false
-        },
-        {
-            "id":"t_wall_metal_v",
+            "id":"t_wall_metal",
             "fg":88,
             "bg":1,
             "rotates":false
         },
         {
-            "id":"t_wall_metal_h",
-            "fg":88,
-            "bg":1,
-            "rotates":false
-        },
-        {
-            "id":"t_wall_glass_v",
+            "id":"t_wall_glass",
             "fg":89,
             "bg":64,
             "rotates":false
         },
         {
-            "id":"t_wall_glass_h",
+            "id":"t_wall_glass_alarm",
             "fg":89,
             "bg":64,
             "rotates":false
         },
         {
-            "id":"t_wall_glass_v_alarm",
-            "fg":89,
-            "bg":64,
-            "rotates":false
-        },
-        {
-            "id":"t_wall_glass_h_alarm",
-            "fg":89,
-            "bg":64,
-            "rotates":false
-        },
-        {
-            "id":"t_reinforced_glass_v",
-            "fg":89,
-            "bg":64,
-            "rotates":false
-        },
-        {
-            "id":"t_reinforced_glass_h",
+            "id":"t_reinforced_glass",
             "fg":89,
             "bg":64,
             "rotates":false
@@ -997,7 +961,7 @@
             "rotates":false
         },
         {
-            "id":"tr_brazier",
+            "id":"f_brazier",
             "rotates":false
         },
         {
@@ -2955,7 +2919,6 @@
          "rotates" : false,
          "multitile" : false
       },
-
         {
             "id":"shot_hull",
             "fg":577,
@@ -8241,13 +8204,6 @@
          "multitile" : false
       },
       {
-         "id" : "saiga_sawn",
-         "fg" : 1404,
-         "bg" : -1,
-         "rotates" : false,
-         "multitile" : false
-      },
-      {
          "id" : "shotgun_s",
          "fg" : 1405,
          "bg" : -1,
@@ -8402,7 +8358,7 @@
          "multitile" : false
       },
       {
-         "id" : "m14a",
+         "id" : "m1a",
          "fg" : 1427,
          "bg" : -1,
          "rotates" : false,

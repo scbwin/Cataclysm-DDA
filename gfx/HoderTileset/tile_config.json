@@ -52,7 +52,6 @@
             "id":"line_trail",
             "bg":12
         },
-
         {
             "id":"animation_line",
             "bg":49
@@ -439,7 +438,7 @@
             "rotates":false
         },
         {
-            "id":"t_wall_v",
+            "id":"t_wall",
             "fg":36,
             "bg":2,
             "multitile":true,
@@ -473,41 +472,7 @@
             "rotates":false
         },
         {
-            "id":"t_wall_h",
-            "fg":36,
-            "bg":2,
-            "multitile":true,
-            "additional_tiles":
-            [
-                {
-                    "id": "center",
-                    "fg": 36
-                },
-                {
-                    "id": "corner",
-                    "fg": 37
-                },
-                {
-                    "id": "edge",
-                    "fg": 38
-                },
-                {
-                    "id": "t_connection",
-                    "fg": 39
-                },
-                {
-                    "id": "end_piece",
-                    "fg": 40
-                },
-                {
-                    "id": "unconnected",
-                    "fg": 41
-                }
-            ],
-            "rotates":false
-        },
-        {
-            "id":"t_concrete_v",
+            "id":"t_concrete_wall",
             "fg":336,
             "bg":2,
             "multitile":true,
@@ -541,41 +506,7 @@
             "rotates":false
         },
         {
-            "id":"t_concrete_h",
-            "fg":336,
-            "bg":2,
-            "multitile":true,
-            "additional_tiles":
-            [
-                {
-                    "id": "center",
-                    "fg": 336
-                },
-                {
-                    "id": "corner",
-                    "fg": 337
-                },
-                {
-                    "id": "edge",
-                    "fg": 338
-                },
-                {
-                    "id": "t_connection",
-                    "fg": 339
-                },
-                {
-                    "id": "end_piece",
-                    "fg": 340
-                },
-                {
-                    "id": "unconnected",
-                    "fg": 341
-                }
-            ],
-            "rotates":false
-        },
-        {
-            "id":"t_wall_metal_v",
+            "id":"t_wall_metal",
             "fg":344,
             "bg":2,
             "multitile":true,
@@ -609,41 +540,7 @@
             "rotates":false
         },
         {
-            "id":"t_wall_metal_h",
-            "fg":344,
-            "bg":2,
-            "multitile":true,
-            "additional_tiles":
-            [
-                {
-                    "id": "center",
-                    "fg": 344
-                },
-                {
-                    "id": "corner",
-                    "fg": 345
-                },
-                {
-                    "id": "edge",
-                    "fg": 346
-                },
-                {
-                    "id": "t_connection",
-                    "fg": 347
-                },
-                {
-                    "id": "end_piece",
-                    "fg": 348
-                },
-                {
-                    "id": "unconnected",
-                    "fg": 349
-                }
-            ],
-            "rotates":false
-        },
-        {
-            "id":"t_wall_glass_v",
+            "id":"t_wall_glass",
             "fg":352,
             "bg":11,
             "multitile":true,
@@ -677,41 +574,7 @@
             "rotates":false
         },
         {
-            "id":"t_wall_glass_h",
-            "fg":352,
-            "bg":11,
-            "multitile":true,
-            "additional_tiles":
-            [
-                {
-                    "id": "center",
-                    "fg": 352
-                },
-                {
-                    "id": "corner",
-                    "fg": 353
-                },
-                {
-                    "id": "edge",
-                    "fg": 354
-                },
-                {
-                    "id": "t_connection",
-                    "fg": 355
-                },
-                {
-                    "id": "end_piece",
-                    "fg": 356
-                },
-                {
-                    "id": "unconnected",
-                    "fg": 337
-                }
-            ],
-             "rotates":false
-        },
-        {
-            "id":"t_wall_glass_v_alarm",
+            "id":"t_wall_glass_alarm",
             "fg":352,
             "bg":11,
             "multitile":true,
@@ -745,75 +608,7 @@
             "rotates":false
         },
         {
-            "id":"t_wall_glass_h_alarm",
-            "fg":352,
-            "bg":11,
-            "multitile":true,
-            "additional_tiles":
-            [
-                {
-                    "id": "center",
-                    "fg": 352
-                },
-                {
-                    "id": "corner",
-                    "fg": 353
-                },
-                {
-                    "id": "edge",
-                    "fg": 354
-                },
-                {
-                    "id": "t_connection",
-                    "fg": 355
-                },
-                {
-                    "id": "end_piece",
-                    "fg": 356
-                },
-                {
-                    "id": "unconnected",
-                    "fg": 337
-                }
-            ],
-            "rotates":false
-        },
-        {
-            "id":"t_reinforced_glass_v",
-            "fg":360,
-            "bg":2,
-            "multitile":true,
-            "additional_tiles":
-            [
-                {
-                    "id": "center",
-                    "fg": 360
-                },
-                {
-                    "id": "corner",
-                    "fg": 361
-                },
-                {
-                    "id": "edge",
-                    "fg": 362
-                },
-                {
-                    "id": "t_connection",
-                    "fg": 363
-                },
-                {
-                    "id": "end_piece",
-                    "fg": 364
-                },
-                {
-                    "id": "unconnected",
-                    "fg": 365
-                }
-            ],
-            "rotates":false
-        },
-        {
-            "id":"t_reinforced_glass_h",
+            "id":"t_reinforced_glass",
             "fg":360,
             "bg":2,
             "multitile":true,
@@ -1824,7 +1619,7 @@
             "rotates":false
         },
         {
-            "id":"tr_brazier",
+            "id":"f_brazier",
             "fg":1609,
             "rotates":false
         },
@@ -3499,7 +3294,7 @@
             "id":"vp_frame_vertical_2",
             "fg":104,
             "rotates":true
-        },        
+        },
         {
             "id":"vp_frame_cover",
             "fg":105,
@@ -3594,7 +3389,7 @@
             "id":"vp_hdframe_vertical_2",
             "fg":104,
             "rotates":true
-        },        
+        },
         {
             "id":"vp_hdframe_cover",
             "fg":105,
@@ -3649,7 +3444,7 @@
             "id":"vp_frame_wood_vertical_2",
             "fg":104,
             "rotates":true
-        },        
+        },
         {
             "id":"vp_frame_wood_cover",
             "fg":105,
@@ -10309,13 +10104,6 @@
          "multitile" : false
       },
       {
-         "id" : "saiga_sawn",
-         "fg" : 1404,
-         "bg" : 193,
-         "rotates" : false,
-         "multitile" : false
-      },
-      {
          "id" : "shotgun_s",
          "fg" : 1405,
          "bg" : 193,
@@ -10470,7 +10258,7 @@
          "multitile" : false
       },
       {
-         "id" : "m14a",
+         "id" : "m1a",
          "fg" : 1427,
          "bg" : 193,
          "rotates" : false,

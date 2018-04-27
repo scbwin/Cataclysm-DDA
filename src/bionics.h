@@ -1,87 +1,132 @@
+#pragma once
 #ifndef BIONICS_H
 #define BIONICS_H
 
-#include "json.h"
+#include "bodypart.h"
+#include "string_id.h"
+
+#include <set>
 #include <string>
+#include <vector>
 #include <map>
 
-/* Thought: Perhaps a HUD bionic that changes the display of the game?
- * Showing more information or something. */
+class player;
+class JsonObject;
+class JsonIn;
+class JsonOut;
+struct quality;
+using quality_id = string_id<quality>;
+struct mutation_branch;
+using trait_id = string_id<mutation_branch>;
+struct bionic_data;
+using bionic_id = string_id<bionic_data>;
 
-typedef std::string bionic_id;
+struct bionic_data {
+    bionic_data();
 
-class bionic_data
-{
-    public:
-        bionic_data(std::string nname, bool ps, bool tog, int pac, int pad, int pot,
-                    int ct, std::string desc, bool fault);
+    std::string name;
+    std::string description;
+    /** Power cost on activation */
+    int power_activate = 0;
+    /** Power cost on deactivation */
+    int power_deactivate = 0;
+    /** Power cost over time, does nothing without a non-zero charge_time */
+    int power_over_time = 0;
+    /** How often a bionic draws power while active in turns */
+    int charge_time = 0;
+    /** Power bank size **/
+    int capacity = 0;
+    /** True if a bionic is a "faulty" bionic */
+    bool faulty = false;
+    bool power_source = false;
+    /** Is true if a bionic is an active instead of a passive bionic */
+    bool activated = false;
+    /** If true, then the bionic only has a function when activated, else it causes
+     *  it's effect every turn.
+     */
+    bool toggled = false;
+    /**
+     * If true, this bionic is a gun bionic and activating it will fire it.
+     * Prevents all other activation effects.
+     */
+    bool gun_bionic = false;
+    /**
+     * If true, this bionic is a weapon bionic and activating it will
+     * create (or destroy) bionic's fake_item in user's hands.
+     * Prevents all other activation effects.
+     */
+    bool weapon_bionic = false;
+    /**
+     * If true, this bionic can provide power to powered armor.
+     */
+    bool armor_interface = false;
+    /**
+     * Body part slots used to install this bionic, mapped to the amount of space required.
+     */
+    std::map<body_part, size_t> occupied_bodyparts;
+    /**
+     * Fake item created for crafting with this bionic available.
+     * Also the item used for gun bionics.
+     */
+    std::string fake_item;
+    /**
+     * Mutations/trait that are removed upon installing this CBM.
+     * E.g. enhanced optic bionic may cancel HYPEROPIC trait.
+     */
+    std::vector<trait_id> canceled_mutations;
+    /**
+     * Additional bionics that are installed automatically when this
+     * bionic is installed. This can be used to install several bionics
+     * from one CBM item, which is useful as each of those can be
+     * activated independently.
+     */
+    std::vector<bionic_id> included_bionics;
 
-        std::string name;
-        bool power_source;
-        /** Is true if a bionic is an active instead of a passive bionic */
-        bool activated;
-        /** If true, then the bionic only has a function when activated, else it causes
-         *  it's effect every turn. */
-        bool toggled;
-        /** Power cost on activation */
-        int power_activate;
-        /** Power cost on deactivation */
-        int power_deactivate;
-        /** Power cost over time, does nothing without a non-zero charge_time */
-        int power_over_time;
-        /** How often a bionic draws power while active in turns */
-        int charge_time;
-        std::string description;
-        /** True if a bionic is a "faulty" bionic */
-        bool faulty;
+    /**
+     * Id of another bionic which this bionic can upgrade.
+     */
+    bionic_id upgraded_bionic;
+    /**
+     * Upgrades available for this bionic (opposite to @ref upgraded_bionic).
+     */
+    std::set<bionic_id> available_upgrades;
+
+    bool is_included( const bionic_id &id ) const;
 };
 
-struct bionic : public JsonSerializer, public JsonDeserializer {
+struct bionic {
     bionic_id id;
-    char invlet;
-    bool powered;
-    int charge;
-    bionic() : id("bio_batteries")
-    {
-        invlet = 'a';
-        powered = false;
-        charge = 0;
+    int         charge  = 0;
+    char        invlet  = 'a';
+    bool        powered = false;
+
+    bionic()
+        : id( "bio_batteries" ) { }
+    bionic( bionic_id pid, char pinvlet )
+        : id( std::move( pid ) ), invlet( pinvlet ) { }
+
+    bionic_data const &info() const {
+        return *id;
     }
-    bionic(bionic_id pid, char pinvlet) : id(pid)
-    {
-        id = pid;
-        invlet = pinvlet;
-        powered = false;
-        charge = 0;
-    };
-    using JsonSerializer::serialize;
-    void serialize(JsonOut &json) const
-    {
-        json.start_object();
-        json.member("id", id);
-        json.member("invlet", (int)invlet);
-        json.member("powered", powered);
-        json.member("charge", charge);
-        json.end_object();
-    }
-    using JsonDeserializer::deserialize;
-    void deserialize(JsonIn &jsin)
-    {
-        JsonObject jo = jsin.get_object();
-        id = jo.get_string("id");
-        invlet = jo.get_int("invlet");
-        powered = jo.get_bool("powered");
-        charge = jo.get_int("charge");
-    }
+
+    int get_quality( const quality_id &quality ) const;
+
+    void serialize( JsonOut &json ) const;
+    void deserialize( JsonIn &jsin );
 };
 
-extern std::map<bionic_id, bionic_data *> bionics;
-extern std::vector<bionic_id> faulty_bionics;
-extern std::vector<bionic_id> power_source_bionics;
-extern std::vector<bionic_id> unpowered_bionics;
+// A simpler wrapper to allow forward declarations of it. std::vector can not
+// be forward declared without a *definition* of bionic, but this wrapper can.
+class bionic_collection : public std::vector<bionic>
+{
+};
 
-void draw_exam_window(WINDOW *win, int border_line, bool examination);
+void check_bionics();
+void finalize_bionics();
 void reset_bionics();
-void load_bionic(JsonObject &jsobj); // load a bionic from JSON
+void load_bionic( JsonObject &jsobj ); // load a bionic from JSON
+char get_free_invlet( player &p );
+std::string list_occupied_bps( const bionic_id &bio_id, const std::string &intro,
+                               const bool each_bp_on_new_line = true );
 
 #endif

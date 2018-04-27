@@ -1,3 +1,4 @@
+#pragma once
 //
 //  iexamine.h
 //  Cataclysm
@@ -8,88 +9,107 @@
 #ifndef IEXAMINE_H
 #define IEXAMINE_H
 
+#include <string>
+#include <list>
+
+#include "string_id.h"
+
 class game;
 class item;
 class player;
 class map;
+struct tripoint;
+struct itype;
+struct mtype;
+using mtype_id = string_id<mtype>;
 
-class iexamine
-{
-        /**
-         * Spawn spiders from a spider egg sack in radius 1 around the egg sack.
-         * Transforms the egg sack furntiture into a ruptured egg sack (f_egg_sacke).
-         * Also spawns eggs.
-         * @param montype The monster type of the created spiders.
-         */
-        void egg_sack_generic(player *p, map *m, int examx, int examy, const std::string &montype);
-    public:
-        void none (player *p, map *m, int examx, int examy);
-
-        void gaspump (player *p, map *m, int examx, int examy);
-        void atm (player *p, map *m, int examx, int examy);
-        void vending (player *p, map *m, int examx, int examy);
-        void toilet (player *p, map *m, int examx, int examy);
-        void elevator (player *p, map *m, int examx, int examy);
-        void controls_gate(player *p, map *m, int examx, int examy);
-        void cardreader (player *p, map *m, int examx, int examy);
-        void rubble (player *p, map *m, int examx, int examy);
-        void chainfence (player *p, map *m, int examx, int examy);
-        void bars(player *p, map *m, int examx, int examy);
-        void portable_structure(player *p, map *m, int examx, int examy);
-        void pit (player *p, map *m, int examx, int examy);
-        void pit_covered (player *p, map *m, int examx, int examy);
-        void fence_post (player *p, map *m, int examx, int examy);
-        void remove_fence_rope (player *p, map *m, int examx, int examy);
-        void remove_fence_wire (player *p, map *m, int examx, int examy);
-        void remove_fence_barbed (player *p, map *m, int examx, int examy);
-        void slot_machine (player *p, map *m, int examx, int examy);
-        void safe (player *p, map *m, int examx, int examy);
-        void gunsafe_ml(player *p, map *m, int examx, int examy);
-        void gunsafe_el(player *p, map *m, int examx, int examy);
-        void bulletin_board (player *p, map *m, int examx, int examy);
-        void fault (player *p, map *m, int examx, int examy);
-        void pedestal_wyrm (player *p, map *m, int examx, int examy);
-        void pedestal_temple (player *p, map *m, int examx, int examy);
-        void door_peephole (player *p, map *m, int examx, int examy);
-        void fswitch (player *p, map *m, int examx, int examy);
-        void flower_poppy (player *p, map *m, int examx, int examy);
-        void flower_blubell (player *p, map *m, int examx, int examy);
-        void flower_dahlia (player *p, map *m, int examx, int examy);
-        void flower_datura (player *p, map *m, int examx, int examy);
-        void flower_marloss (player *p, map *m, int examx, int examy);
-        void flower_dandelion (player *p, map *m, int examx, int examy);
-        void egg_sackbw(player *p, map *m, int examx, int examy);
-        void egg_sackws(player *p, map *m, int examx, int examy);
-        void fungus (player *p, map *m, int examx, int examy);
-        void dirtmound (player *p, map *m, int examx, int examy);
-        void aggie_plant (player *p, map *m, int examx, int examy);
-        void pick_plant(player *p, map *m, int examx, int examy, std::string itemType, int new_ter,
-                        bool seeds = false);
-        void harvest_tree_shrub (player *p, map *m, int examx, int examy);
-        void tree_pine (player *p, map *m, int examx, int examy);
-        void tree_blackjack (player *p, map *m, int examx, int examy);
-        void shrub_blueberry (player *p, map *m, int examx, int examy);
-        void shrub_strawberry (player *p, map *m, int examx, int examy);
-        void shrub_marloss (player *p, map *m, int examx, int examy);
-        void tree_marloss(player *p, map *m, int examx, int examy);
-        void shrub_wildveggies (player *p, map *m, int examx, int examy);
-        void recycler (player *p, map *m, int examx, int examy);
-        void trap(player *p, map *m, int examx, int examy);
-        void water_source (player *p, map *m, const int examx, const int examy);
-        void swater_source (player *p, map *m, const int examx, const int examy);
-        void acid_source (player *p, map *m, const int examx, const int examy);
-        void kiln_empty (player *p, map *m, const int examx, const int examy);
-        void kiln_full (player *p, map *m, const int examx, const int examy);
-        void fvat_empty (player *p, map *m, const int examx, const int examy);
-        void fvat_full (player *p, map *m, const int examx, const int examy);
-        void keg (player *p, map *m, const int examx, const int examy);
-        void reload_furniture (player *p, map *m, const int examx, const int examy);
-        void curtains (player *p, map *m, const int examx, const int examy);
-        void sign (player *p, map *m, const int examx, const int examy);
-        void pay_gas (player *p, map *m, const int examx, const int examy);
+enum hack_result {
+    HACK_UNABLE,
+    HACK_FAIL,
+    HACK_NOTHING,
+    HACK_SUCCESS
 };
 
-typedef void (iexamine::*iexamine_function)(player *, map *, int, int);
-iexamine_function iexamine_function_from_string(std::string function_name);
+namespace iexamine
+{
+
+void egg_sack_generic( player &p, const tripoint &examp, const mtype_id &montype );
+
+void none( player &p, const tripoint &examp );
+
+void gaspump( player &p, const tripoint &examp );
+void atm( player &p, const tripoint &examp );
+void vending( player &p, const tripoint &examp );
+void toilet( player &p, const tripoint &examp );
+void elevator( player &p, const tripoint &examp );
+void controls_gate( player &p, const tripoint &examp );
+void cardreader( player &p, const tripoint &examp );
+void cvdmachine( player &p, const tripoint &examp );
+void rubble( player &p, const tripoint &examp );
+void crate( player &p, const tripoint &examp );
+void chainfence( player &p, const tripoint &examp );
+void bars( player &p, const tripoint &examp );
+void deployed_furniture( player &p, const tripoint &pos );
+void portable_structure( player &p, const tripoint &examp );
+void pit( player &p, const tripoint &examp );
+void pit_covered( player &p, const tripoint &examp );
+void slot_machine( player &p, const tripoint &examp );
+void safe( player &p, const tripoint &examp );
+void gunsafe_ml( player &p, const tripoint &examp );
+void gunsafe_el( player &p, const tripoint &examp );
+void harvest_furn_nectar( player &p, const tripoint &examp );
+void harvest_furn( player &p, const tripoint &examp );
+void harvest_ter_nectar( player &p, const tripoint &examp );
+void harvest_ter( player &p, const tripoint &examp );
+void harvested_plant( player &p, const tripoint &examp );
+void locked_object( player &p, const tripoint &examp );
+void bulletin_board( player &p, const tripoint &examp );
+void fault( player &p, const tripoint &examp );
+void pedestal_wyrm( player &p, const tripoint &examp );
+void pedestal_temple( player &p, const tripoint &examp );
+void door_peephole( player &p, const tripoint &examp );
+void fswitch( player &p, const tripoint &examp );
+void flower_poppy( player &p, const tripoint &examp );
+void flower_bluebell( player &p, const tripoint &examp );
+void flower_dahlia( player &p, const tripoint &examp );
+void flower_marloss( player &p, const tripoint &examp );
+void egg_sackbw( player &p, const tripoint &examp );
+void egg_sackcs( player &p, const tripoint &examp );
+void egg_sackws( player &p, const tripoint &examp );
+void fungus( player &p, const tripoint &examp );
+void dirtmound( player &p, const tripoint &examp );
+void aggie_plant( player &p, const tripoint &examp );
+void tree_hickory( player &p, const tripoint &examp );
+void tree_maple( player &p, const tripoint &examp );
+void tree_maple_tapped( player &p, const tripoint &examp );
+void shrub_marloss( player &p, const tripoint &examp );
+void tree_marloss( player &p, const tripoint &examp );
+void shrub_wildveggies( player &p, const tripoint &examp );
+void recycler( player &p, const tripoint &examp );
+void trap( player &p, const tripoint &examp );
+void water_source( player &p, const tripoint &examp );
+void kiln_empty( player &p, const tripoint &examp );
+void kiln_full( player &p, const tripoint &examp );
+void fvat_empty( player &p, const tripoint &examp );
+void fvat_full( player &p, const tripoint &examp );
+void keg( player &p, const tripoint &examp );
+void reload_furniture( player &p, const tripoint &examp );
+void curtains( player &p, const tripoint &examp );
+void sign( player &p, const tripoint &examp );
+void pay_gas( player &p, const tripoint &examp );
+void climb_down( player &p, const tripoint &examp );
+hack_result hack_attempt( player &p );
+
+bool pour_into_keg( const tripoint &pos, item &liquid );
+
+bool has_keg( const tripoint &pos );
+
+
+std::list<item> get_harvest_items( const itype &type, int plant_count,
+                                   int seed_count, bool byproducts );
+} //namespace iexamine
+
+using iexamine_function = void ( * )( player &, const tripoint & );
+iexamine_function iexamine_function_from_string( std::string const &function_name );
 
 #endif

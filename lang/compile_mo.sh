@@ -1,6 +1,4 @@
-#!/bin/bash
-
-oldpwd=`pwd`
+#!/bin/sh
 
 if [ ! -d lang/po ]
 then
@@ -21,7 +19,7 @@ then
 fi
 
 # compile .mo file for each specified language
-if [ $# -gt 0 ]
+if [ $# -gt 0 ] && [ $1 != "all" ]
 then
     for n in $@
     do
@@ -38,5 +36,3 @@ else
         msgfmt -f -o $LOCALE_DIR/${n}/LC_MESSAGES/cataclysm-dda.mo ${f}
     done
 fi
-
-cd $oldpwd

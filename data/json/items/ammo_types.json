@@ -3,13 +3,7 @@
         "type" : "ammunition_type",
         "id" : "NULL",
         "name" : "none",
-        "default" : ""
-    },
-    {
-        "type" : "ammunition_type",
-        "id" : "generic_no_ammo",
-        "name" : "none",
-        "default" : ""
+        "default" : "null"
     },
     {
         "type" : "ammunition_type",
@@ -74,8 +68,20 @@
     {
         "type" : "ammunition_type",
         "id" : "9mm",
-        "name" : "9mm",
+        "name" : "9x19mm",
         "default" : "9mm"
+    },
+    {
+        "type": "ammunition_type",
+        "id": "357sig",
+        "name": ".357 SIG",
+        "default": "357sig_jhp"
+    },
+    {
+        "type" : "ammunition_type",
+        "id" : "9x18",
+        "name" : "9x18mm",
+        "default" : "9x18mm"
     },
     {
         "type" : "ammunition_type",
@@ -87,7 +93,7 @@
         "type" : "ammunition_type",
         "id" : "40",
         "name" : ".40",
-        "default" : "10mm"
+        "default" : "40sw"
     },
     {
         "type" : "ammunition_type",
@@ -133,6 +139,12 @@
     },
     {
         "type" : "ammunition_type",
+        "id" : "545x39",
+        "name" : "5.45x39mm",
+        "default" : "545"
+    },
+    {
+        "type" : "ammunition_type",
         "id" : "223",
         "name" : ".223",
         "default" : "223"
@@ -153,7 +165,7 @@
         "type" : "ammunition_type",
         "id" : "40mm",
         "name" : "40mm grenade",
-        "default" : "40mm_concussive"
+        "default" : "40mm_frag"
     },
     {
         "type" : "ammunition_type",
@@ -176,7 +188,7 @@
     {
         "type" : "ammunition_type",
         "id" : "m235",
-        "name" : "M235 Incendiary TPA",
+        "name" : "M235 66mm Incendiary TPA",
         "default" : "m235tpa"
     },
     {
@@ -205,6 +217,12 @@
     },
     {
         "type" : "ammunition_type",
+        "id" : "soap",
+        "name" : "soap",
+        "default" : "soap"
+    },
+    {
+        "type" : "ammunition_type",
         "id" : "tape",
         "name" : "duct tape",
         "default" : "duct_tape"
@@ -223,21 +241,15 @@
     },
     {
         "type" : "ammunition_type",
-        "id" : "laser_capacitor",
-        "name" : "charge",
-        "default" : "laser_pack"
-    },
-    {
-        "type" : "ammunition_type",
         "id" : "plutonium",
         "name" : "plutonium",
         "default" : "plut_cell"
     },
     {
         "type" : "ammunition_type",
-        "id" : "muscle",
-        "name" : "muscle",
-        "default" : ""
+        "id" : "reactor_slurry",
+        "name" : "plutonium slurry",
+        "default" : "plut_slurry"
     },
     {
         "type" : "ammunition_type",
@@ -254,14 +266,26 @@
     {
         "type" : "ammunition_type",
         "id" : "plasma",
-        "name" : "hydrogen",
+        "name" : "solid hydrogen",
         "default" : "plasma"
     },
     {
         "type" : "ammunition_type",
-        "id" : "water",
-        "name" : "clean water",
-        "default" : "water_clean"
+        "id" : "flammable",
+        "name" : "flammable liquid",
+        "default" : "napalm"
+    },
+    {
+       "type" : "ammunition_type",
+        "id" : "weldgas",
+        "name" : "welding gas",
+        "default" : "oxyacetylene"
+    },
+    {
+        "type" : "ammunition_type",
+        "id" : "conc_alcohol",
+        "name" : "concentrated alcohol",
+        "default" : "denat_alcohol"
     },
     {
         "type" : "ammunition_type",
@@ -325,6 +349,12 @@
     },
     {
         "type" : "ammunition_type",
+        "id" : "stimpack_ammo",
+        "name" : "stimulant module",
+        "default" : "stimpack_ammo"
+    },
+    {
+        "type" : "ammunition_type",
         "id" : "components",
         "name" : "components",
         "default" : "components"
@@ -332,14 +362,8 @@
     {
         "type" : "ammunition_type",
         "id" : "RPG-7",
-        "name" : "RPG-7",
+        "name" : "93mm RPG-7",
         "default" : "RPG-7_ammo"
-    },
-    {
-        "type" : "ammunition_type",
-        "id" : "dart",
-        "name" : "dart",
-        "default" : "dart"
     },
     {
         "type" : "ammunition_type",
@@ -367,7 +391,7 @@
     },
     {
         "type" : "ammunition_type",
-        "id" : "ammo_flintlock",
+        "id" : "flintlock",
         "name" : "paper cartridge",
         "default" : "flintlock_ammo"
     },
@@ -399,7 +423,7 @@
         "type" : "ammunition_type",
         "id" : "fish_bait",
         "name" : "fish bait",
-        "default" : "fish_bait_meat"
+        "default" : "fish_bait"
     },
     {
         "type" : "ammunition_type",
@@ -412,6 +436,17 @@
         "id" : "unfinished_char",
         "name" : "semi-charred fuel",
         "default" : "unfinished_charcoal"
+    },
+    {
+        "type" : "ammunition_type",
+        "id" : "chemical_spray",
+        "name" : "sprayable chemical",
+        "default" : "gas_fungicidal"
+    },
+    {
+        "type" : "ammunition_type",
+        "id" : "milk",
+        "name" : "milk",
+        "default" : "milk"
     }
-
 ]

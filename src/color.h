@@ -1,192 +1,490 @@
+#pragma once
 #ifndef COLOR_H
 #define COLOR_H
 
-#include "cursesdef.h"
+#include <array>
 #include <string>
+#include <list>
+#include <unordered_map>
+#include <utility>
+#include <functional>
 
-class JsonObject;
+#define all_colors get_all_colors()
+
+#define c_black all_colors.get(def_c_black)
+#define c_white all_colors.get(def_c_white)
+#define c_light_gray all_colors.get(def_c_light_gray)
+#define c_dark_gray all_colors.get(def_c_dark_gray)
+#define c_red all_colors.get(def_c_red)
+#define c_green all_colors.get(def_c_green)
+#define c_blue all_colors.get(def_c_blue)
+#define c_cyan all_colors.get(def_c_cyan)
+#define c_magenta all_colors.get(def_c_magenta)
+#define c_brown all_colors.get(def_c_brown)
+#define c_light_red all_colors.get(def_c_light_red)
+#define c_light_green all_colors.get(def_c_light_green)
+#define c_light_blue all_colors.get(def_c_light_blue)
+#define c_light_cyan all_colors.get(def_c_light_cyan)
+#define c_pink all_colors.get(def_c_pink)
+#define c_yellow all_colors.get(def_c_yellow)
+
+#define h_black all_colors.get(def_h_black)
+#define h_white all_colors.get(def_h_white)
+#define h_light_gray all_colors.get(def_h_light_gray)
+#define h_dark_gray all_colors.get(def_h_dark_gray)
+#define h_red all_colors.get(def_h_red)
+#define h_green all_colors.get(def_h_green)
+#define h_blue all_colors.get(def_h_blue)
+#define h_cyan all_colors.get(def_h_cyan)
+#define h_magenta all_colors.get(def_h_magenta)
+#define h_brown all_colors.get(def_h_brown)
+#define h_light_red all_colors.get(def_h_light_red)
+#define h_light_green all_colors.get(def_h_light_green)
+#define h_light_blue all_colors.get(def_h_light_blue)
+#define h_light_cyan all_colors.get(def_h_light_cyan)
+#define h_pink all_colors.get(def_h_pink)
+#define h_yellow all_colors.get(def_h_yellow)
+
+#define i_black all_colors.get(def_i_black)
+#define i_white all_colors.get(def_i_white)
+#define i_light_gray all_colors.get(def_i_light_gray)
+#define i_dark_gray all_colors.get(def_i_dark_gray)
+#define i_red all_colors.get(def_i_red)
+#define i_green all_colors.get(def_i_green)
+#define i_blue all_colors.get(def_i_blue)
+#define i_cyan all_colors.get(def_i_cyan)
+#define i_magenta all_colors.get(def_i_magenta)
+#define i_brown all_colors.get(def_i_brown)
+#define i_light_red all_colors.get(def_i_light_red)
+#define i_light_green all_colors.get(def_i_light_green)
+#define i_light_blue all_colors.get(def_i_light_blue)
+#define i_light_cyan all_colors.get(def_i_light_cyan)
+#define i_pink all_colors.get(def_i_pink)
+#define i_yellow all_colors.get(def_i_yellow)
+
+#define c_unset all_colors.get(def_c_unset)
+
+#define c_white_red all_colors.get(def_c_white_red)
+#define c_light_gray_red all_colors.get(def_c_light_gray_red)
+#define c_dark_gray_red all_colors.get(def_c_dark_gray_red)
+#define c_red_red all_colors.get(def_c_red_red)
+#define c_green_red all_colors.get(def_c_green_red)
+#define c_blue_red all_colors.get(def_c_blue_red)
+#define c_cyan_red all_colors.get(def_c_cyan_red)
+#define c_magenta_red all_colors.get(def_c_magenta_red)
+#define c_brown_red all_colors.get(def_c_brown_red)
+#define c_light_red_red all_colors.get(def_c_light_red_red)
+#define c_light_green_red all_colors.get(def_c_light_green_red)
+#define c_light_blue_red all_colors.get(def_c_light_blue_red)
+#define c_light_cyan_red all_colors.get(def_c_light_cyan_red)
+#define c_pink_red all_colors.get(def_c_pink_red)
+#define c_yellow_red all_colors.get(def_c_yellow_red)
+
+#define c_black_white all_colors.get(def_c_black_white)
+#define c_dark_gray_white all_colors.get(def_c_dark_gray_white)
+#define c_light_gray_white all_colors.get(def_c_light_gray_white)
+#define c_white_white all_colors.get(def_c_white_white)
+#define c_red_white all_colors.get(def_c_red_white)
+#define c_light_red_white all_colors.get(def_c_light_red_white)
+#define c_green_white all_colors.get(def_c_green_white)
+#define c_light_green_white all_colors.get(def_c_light_green_white)
+#define c_brown_white all_colors.get(def_c_brown_white)
+#define c_yellow_white all_colors.get(def_c_yellow_white)
+#define c_blue_white all_colors.get(def_c_blue_white)
+#define c_light_blue_white all_colors.get(def_c_light_blue_white)
+#define c_magenta_white all_colors.get(def_c_magenta_white)
+#define c_pink_white all_colors.get(def_c_pink_white)
+#define c_cyan_white all_colors.get(def_c_cyan_white)
+#define c_light_cyan_white all_colors.get(def_c_light_cyan_white)
+
+#define c_black_green all_colors.get(def_c_black_green)
+#define c_dark_gray_green all_colors.get(def_c_dark_gray_green)
+#define c_light_gray_green all_colors.get(def_c_light_gray_green)
+#define c_white_green all_colors.get(def_c_white_green)
+#define c_red_green all_colors.get(def_c_red_green)
+#define c_light_red_green all_colors.get(def_c_light_red_green)
+#define c_green_green all_colors.get(def_c_green_green)
+#define c_light_green_green all_colors.get(def_c_light_green_green)
+#define c_brown_green all_colors.get(def_c_brown_green)
+#define c_yellow_green all_colors.get(def_c_yellow_green)
+#define c_blue_green all_colors.get(def_c_blue_green)
+#define c_light_blue_green all_colors.get(def_c_light_blue_green)
+#define c_magenta_green all_colors.get(def_c_magenta_green)
+#define c_pink_green all_colors.get(def_c_pink_green)
+#define c_cyan_green all_colors.get(def_c_cyan_green)
+#define c_light_cyan_green all_colors.get(def_c_light_cyan_green)
+
+#define c_black_yellow all_colors.get(def_c_black_yellow)
+#define c_dark_gray_yellow all_colors.get(def_c_dark_gray_yellow)
+#define c_light_gray_yellow all_colors.get(def_c_light_gray_yellow)
+#define c_white_yellow all_colors.get(def_c_white_yellow)
+#define c_red_yellow all_colors.get(def_c_red_yellow)
+#define c_light_red_yellow all_colors.get(def_c_light_red_yellow)
+#define c_green_yellow all_colors.get(def_c_green_yellow)
+#define c_light_green_yellow all_colors.get(def_c_light_green_yellow)
+#define c_brown_yellow all_colors.get(def_c_brown_yellow)
+#define c_yellow_yellow all_colors.get(def_c_yellow_yellow)
+#define c_blue_yellow all_colors.get(def_c_blue_yellow)
+#define c_light_blue_yellow all_colors.get(def_c_light_blue_yellow)
+#define c_magenta_yellow all_colors.get(def_c_magenta_yellow)
+#define c_pink_yellow all_colors.get(def_c_pink_yellow)
+#define c_cyan_yellow all_colors.get(def_c_cyan_yellow)
+#define c_light_cyan_yellow all_colors.get(def_c_light_cyan_yellow)
+
+#define c_black_magenta all_colors.get(def_c_black_magenta)
+#define c_dark_gray_magenta all_colors.get(def_c_dark_gray_magenta)
+#define c_light_gray_magenta all_colors.get(def_c_light_gray_magenta)
+#define c_white_magenta all_colors.get(def_c_white_magenta)
+#define c_red_magenta all_colors.get(def_c_red_magenta)
+#define c_light_red_magenta all_colors.get(def_c_light_red_magenta)
+#define c_green_magenta all_colors.get(def_c_green_magenta)
+#define c_light_green_magenta all_colors.get(def_c_light_green_magenta)
+#define c_brown_magenta all_colors.get(def_c_brown_magenta)
+#define c_yellow_magenta all_colors.get(def_c_yellow_magenta)
+#define c_blue_magenta all_colors.get(def_c_blue_magenta)
+#define c_light_blue_magenta all_colors.get(def_c_light_blue_magenta)
+#define c_magenta_magenta all_colors.get(def_c_magenta_magenta)
+#define c_pink_magenta all_colors.get(def_c_pink_magenta)
+#define c_cyan_magenta all_colors.get(def_c_cyan_magenta)
+#define c_light_cyan_magenta all_colors.get(def_c_light_cyan_magenta)
+
+#define c_black_cyan all_colors.get(def_c_black_cyan)
+#define c_dark_gray_cyan all_colors.get(def_c_dark_gray_cyan)
+#define c_light_gray_cyan all_colors.get(def_c_light_gray_cyan)
+#define c_white_cyan all_colors.get(def_c_white_cyan)
+#define c_red_cyan all_colors.get(def_c_red_cyan)
+#define c_light_red_cyan all_colors.get(def_c_light_red_cyan)
+#define c_green_cyan all_colors.get(def_c_green_cyan)
+#define c_light_green_cyan all_colors.get(def_c_light_green_cyan)
+#define c_brown_cyan all_colors.get(def_c_brown_cyan)
+#define c_yellow_cyan all_colors.get(def_c_yellow_cyan)
+#define c_blue_cyan all_colors.get(def_c_blue_cyan)
+#define c_light_blue_cyan all_colors.get(def_c_light_blue_cyan)
+#define c_magenta_cyan all_colors.get(def_c_magenta_cyan)
+#define c_pink_cyan all_colors.get(def_c_pink_cyan)
+#define c_cyan_cyan all_colors.get(def_c_cyan_cyan)
+#define c_light_cyan_cyan all_colors.get(def_c_light_cyan_cyan)
+
+// def_x is a color that maps to x with default settings
+enum color_id {
+    def_c_black = 0,
+    def_c_white,
+    def_c_light_gray,
+    def_c_dark_gray,
+    def_c_red,
+    def_c_green,
+    def_c_blue,
+    def_c_cyan,
+    def_c_magenta,
+    def_c_brown,
+    def_c_light_red,
+    def_c_light_green,
+    def_c_light_blue,
+    def_c_light_cyan,
+    def_c_pink,
+    def_c_yellow,
+
+    def_h_black,
+    def_h_white,
+    def_h_light_gray,
+    def_h_dark_gray,
+    def_h_red,
+    def_h_green,
+    def_h_blue,
+    def_h_cyan,
+    def_h_magenta,
+    def_h_brown,
+    def_h_light_red,
+    def_h_light_green,
+    def_h_light_blue,
+    def_h_light_cyan,
+    def_h_pink,
+    def_h_yellow,
+
+    def_i_black,
+    def_i_white,
+    def_i_light_gray,
+    def_i_dark_gray,
+    def_i_red,
+    def_i_green,
+    def_i_blue,
+    def_i_cyan,
+    def_i_magenta,
+    def_i_brown,
+    def_i_light_red,
+    def_i_light_green,
+    def_i_light_blue,
+    def_i_light_cyan,
+    def_i_pink,
+    def_i_yellow,
+
+    def_c_unset,
+
+    def_c_white_red,
+    def_c_light_gray_red,
+    def_c_dark_gray_red,
+    def_c_red_red,
+    def_c_green_red,
+    def_c_blue_red,
+    def_c_cyan_red,
+    def_c_magenta_red,
+    def_c_brown_red,
+    def_c_light_red_red,
+    def_c_light_green_red,
+    def_c_light_blue_red,
+    def_c_light_cyan_red,
+    def_c_pink_red,
+    def_c_yellow_red,
+
+    def_c_black_white,
+    def_c_dark_gray_white,
+    def_c_light_gray_white,
+    def_c_white_white,
+    def_c_red_white,
+    def_c_light_red_white,
+    def_c_green_white,
+    def_c_light_green_white,
+    def_c_brown_white,
+    def_c_yellow_white,
+    def_c_blue_white,
+    def_c_light_blue_white,
+    def_c_magenta_white,
+    def_c_pink_white,
+    def_c_cyan_white,
+    def_c_light_cyan_white,
+
+    def_c_black_green,
+    def_c_dark_gray_green,
+    def_c_light_gray_green,
+    def_c_white_green,
+    def_c_red_green,
+    def_c_light_red_green,
+    def_c_green_green,
+    def_c_light_green_green,
+    def_c_brown_green,
+    def_c_yellow_green,
+    def_c_blue_green,
+    def_c_light_blue_green,
+    def_c_magenta_green,
+    def_c_pink_green,
+    def_c_cyan_green,
+    def_c_light_cyan_green,
+
+    def_c_black_yellow,
+    def_c_dark_gray_yellow,
+    def_c_light_gray_yellow,
+    def_c_white_yellow,
+    def_c_red_yellow,
+    def_c_light_red_yellow,
+    def_c_green_yellow,
+    def_c_light_green_yellow,
+    def_c_brown_yellow,
+    def_c_yellow_yellow,
+    def_c_blue_yellow,
+    def_c_light_blue_yellow,
+    def_c_magenta_yellow,
+    def_c_pink_yellow,
+    def_c_cyan_yellow,
+    def_c_light_cyan_yellow,
+
+    def_c_black_magenta,
+    def_c_dark_gray_magenta,
+    def_c_light_gray_magenta,
+    def_c_white_magenta,
+    def_c_red_magenta,
+    def_c_light_red_magenta,
+    def_c_green_magenta,
+    def_c_light_green_magenta,
+    def_c_brown_magenta,
+    def_c_yellow_magenta,
+    def_c_blue_magenta,
+    def_c_light_blue_magenta,
+    def_c_magenta_magenta,
+    def_c_pink_magenta,
+    def_c_cyan_magenta,
+    def_c_light_cyan_magenta,
+
+    def_c_black_cyan,
+    def_c_dark_gray_cyan,
+    def_c_light_gray_cyan,
+    def_c_white_cyan,
+    def_c_red_cyan,
+    def_c_light_red_cyan,
+    def_c_green_cyan,
+    def_c_light_green_cyan,
+    def_c_brown_cyan,
+    def_c_yellow_cyan,
+    def_c_blue_cyan,
+    def_c_light_blue_cyan,
+    def_c_magenta_cyan,
+    def_c_pink_cyan,
+    def_c_cyan_cyan,
+    def_c_light_cyan_cyan,
+
+    num_colors
+};
+
+class JsonOut;
+class JsonIn;
 
 void init_colors();
 
-enum col_attribute {
-WA_NULL = 0,
-HI = 1,
-INV = 2
+// Index for highlight cache
+enum hl_enum {
+    HL_BLUE = 0,
+    HL_RED,
+    HL_WHITE,
+    HL_GREEN,
+    HL_YELLOW,
+    HL_MAGENTA,
+    HL_CYAN,
+    NUM_HL
 };
 
-enum nc_color : int {
-c_black   = COLOR_PAIR(30),
-c_white   = COLOR_PAIR(1)  | A_BOLD,
-c_ltgray  = COLOR_PAIR(1),
-c_dkgray  = COLOR_PAIR(30) | A_BOLD,
-c_red     = COLOR_PAIR(2),
-c_green   = COLOR_PAIR(3),
-c_blue    = COLOR_PAIR(4),
-c_cyan    = COLOR_PAIR(5),
-c_magenta = COLOR_PAIR(6),
-c_brown   = COLOR_PAIR(7),
-c_ltred   = COLOR_PAIR(2)  | A_BOLD,
-c_ltgreen = COLOR_PAIR(3)  | A_BOLD,
-c_ltblue  = COLOR_PAIR(4)  | A_BOLD,
-c_ltcyan  = COLOR_PAIR(5)  | A_BOLD,
-c_pink    = COLOR_PAIR(6)  | A_BOLD,
-c_yellow  = COLOR_PAIR(7)  | A_BOLD,
+class nc_color
+{
+    private:
+        // color is actually an ncurses attribute.
+        int attribute_value;
 
-h_black   = COLOR_PAIR(20),
-h_white   = COLOR_PAIR(15) | A_BOLD,
-h_ltgray  = COLOR_PAIR(15),
-h_dkgray  = COLOR_PAIR(20) | A_BOLD,
-h_red     = COLOR_PAIR(16),
-h_green   = COLOR_PAIR(17),
-h_blue    = COLOR_PAIR(20),
-h_cyan    = COLOR_PAIR(19),
-h_magenta = COLOR_PAIR(21),
-h_brown   = COLOR_PAIR(22),
-h_ltred   = COLOR_PAIR(16) | A_BOLD,
-h_ltgreen = COLOR_PAIR(17) | A_BOLD,
-h_ltblue  = COLOR_PAIR(18) | A_BOLD,
-h_ltcyan  = COLOR_PAIR(19) | A_BOLD,
-h_pink    = COLOR_PAIR(21) | A_BOLD,
-h_yellow  = COLOR_PAIR(22) | A_BOLD,
+        nc_color( const int a ) : attribute_value( a ) { }
 
-i_black   = COLOR_PAIR(32),
-i_white   = COLOR_PAIR(8)  | A_BLINK,
-i_ltgray  = COLOR_PAIR(8),
-i_dkgray  = COLOR_PAIR(32) | A_BLINK,
-i_red     = COLOR_PAIR(9),
-i_green   = COLOR_PAIR(10),
-i_blue    = COLOR_PAIR(11),
-i_cyan    = COLOR_PAIR(12),
-i_magenta = COLOR_PAIR(13),
-i_brown   = COLOR_PAIR(14),
-i_ltred   = COLOR_PAIR(9)  | A_BLINK,
-i_ltgreen = COLOR_PAIR(10) | A_BLINK,
-i_ltblue  = COLOR_PAIR(11) | A_BLINK,
-i_ltcyan  = COLOR_PAIR(12) | A_BLINK,
-i_pink    = COLOR_PAIR(13) | A_BLINK,
-i_yellow  = COLOR_PAIR(14) | A_BLINK,
+    public:
+        nc_color() : attribute_value( 0 ) { }
 
-c_white_red   = COLOR_PAIR(23) | A_BOLD,
-c_ltgray_red  = COLOR_PAIR(23),
-c_dkgray_red  = COLOR_PAIR(9),
-c_red_red     = COLOR_PAIR(9),
-c_green_red   = COLOR_PAIR(25),
-c_blue_red    = COLOR_PAIR(26),
-c_cyan_red    = COLOR_PAIR(27),
-c_magenta_red = COLOR_PAIR(28),
-c_brown_red   = COLOR_PAIR(29),
-c_ltred_red   = COLOR_PAIR(24) | A_BOLD,
-c_ltgreen_red = COLOR_PAIR(25) | A_BOLD,
-c_ltblue_red  = COLOR_PAIR(26) | A_BOLD,
-c_ltcyan_red  = COLOR_PAIR(27) | A_BOLD,
-c_pink_red    = COLOR_PAIR(28) | A_BOLD,
-c_yellow_red  = COLOR_PAIR(29) | A_BOLD,
+        // Most of the functions here are implemented in ncurses_def.cpp
+        // (for ncurses builds) *and* in cursesport.cpp (for other builds).
 
-c_unset       = COLOR_PAIR(31),
+        static nc_color from_color_pair_index( const int index );
+        int to_color_pair_index() const;
 
- c_black_white  = COLOR_PAIR(32),
- c_dkgray_white  = COLOR_PAIR(32) | A_BOLD,
- c_ltgray_white  = COLOR_PAIR(33),
- c_white_white  = COLOR_PAIR(33) | A_BOLD,
- c_red_white  = COLOR_PAIR(34),
- c_ltred_white  = COLOR_PAIR(34) | A_BOLD,
- c_green_white  = COLOR_PAIR(35),
- c_ltgreen_white  = COLOR_PAIR(35) | A_BOLD,
- c_brown_white  = COLOR_PAIR(36),
- c_yellow_white  = COLOR_PAIR(36) | A_BOLD,
- c_blue_white  = COLOR_PAIR(37),
- c_ltblue_white  = COLOR_PAIR(37) | A_BOLD,
- c_magenta_white  = COLOR_PAIR(38),
- c_pink_white  = COLOR_PAIR(38) | A_BOLD,
- c_cyan_white  = COLOR_PAIR(39),
- c_ltcyan_white  = COLOR_PAIR(39) | A_BOLD,
- c_black_green  = COLOR_PAIR(40),
- c_dkgray_green  = COLOR_PAIR(40) | A_BOLD,
- c_ltgray_green  = COLOR_PAIR(41),
- c_white_green  = COLOR_PAIR(41) | A_BOLD,
- c_red_green  = COLOR_PAIR(42),
- c_ltred_green  = COLOR_PAIR(42) | A_BOLD,
- c_green_green  = COLOR_PAIR(43),
- c_ltgreen_green  = COLOR_PAIR(43) | A_BOLD,
- c_brown_green  = COLOR_PAIR(44),
- c_yellow_green  = COLOR_PAIR(44) | A_BOLD,
- c_blue_green  = COLOR_PAIR(45),
- c_ltblue_green  = COLOR_PAIR(45) | A_BOLD,
- c_magenta_green  = COLOR_PAIR(46),
- c_pink_green  = COLOR_PAIR(46) | A_BOLD,
- c_cyan_green  = COLOR_PAIR(47),
- c_ltcyan_green  = COLOR_PAIR(47) | A_BOLD,
- c_black_yellow  = COLOR_PAIR(48),
- c_dkgray_yellow  = COLOR_PAIR(48) | A_BOLD,
- c_ltgray_yellow  = COLOR_PAIR(49),
- c_white_yellow  = COLOR_PAIR(49) | A_BOLD,
- c_red_yellow  = COLOR_PAIR(50),
- c_ltred_yellow  = COLOR_PAIR(50) | A_BOLD,
- c_green_yellow  = COLOR_PAIR(51),
- c_ltgreen_yellow  = COLOR_PAIR(51) | A_BOLD,
- c_brown_yellow  = COLOR_PAIR(52),
- c_yellow_yellow  = COLOR_PAIR(52) | A_BOLD,
- c_blue_yellow  = COLOR_PAIR(53),
- c_ltblue_yellow  = COLOR_PAIR(53) | A_BOLD,
- c_magenta_yellow  = COLOR_PAIR(54),
- c_pink_yellow  = COLOR_PAIR(54) | A_BOLD,
- c_cyan_yellow  = COLOR_PAIR(55),
- c_ltcyan_yellow  = COLOR_PAIR(55) | A_BOLD,
- c_black_magenta  = COLOR_PAIR(56),
- c_dkgray_magenta  = COLOR_PAIR(56) | A_BOLD,
- c_ltgray_magenta  = COLOR_PAIR(57),
- c_white_magenta  = COLOR_PAIR(57) | A_BOLD,
- c_red_magenta  = COLOR_PAIR(58),
- c_ltred_magenta  = COLOR_PAIR(58) | A_BOLD,
- c_green_magenta  = COLOR_PAIR(59),
- c_ltgreen_magenta  = COLOR_PAIR(59) | A_BOLD,
- c_brown_magenta  = COLOR_PAIR(60),
- c_yellow_magenta  = COLOR_PAIR(60) | A_BOLD,
- c_blue_magenta  = COLOR_PAIR(61),
- c_ltblue_magenta  = COLOR_PAIR(61) | A_BOLD,
- c_magenta_magenta  = COLOR_PAIR(62),
- c_pink_magenta  = COLOR_PAIR(62) | A_BOLD,
- c_cyan_magenta  = COLOR_PAIR(63),
- c_ltcyan_magenta  = COLOR_PAIR(63) | A_BOLD,
- c_black_cyan  = COLOR_PAIR(64),
- c_dkgray_cyan  = COLOR_PAIR(64) | A_BOLD,
- c_ltgray_cyan  = COLOR_PAIR(65),
- c_white_cyan  = COLOR_PAIR(65) | A_BOLD,
- c_red_cyan  = COLOR_PAIR(66),
- c_ltred_cyan  = COLOR_PAIR(66) | A_BOLD,
- c_green_cyan  = COLOR_PAIR(67),
- c_ltgreen_cyan  = COLOR_PAIR(67) | A_BOLD,
- c_brown_cyan  = COLOR_PAIR(68),
- c_yellow_cyan  = COLOR_PAIR(68) | A_BOLD,
- c_blue_cyan  = COLOR_PAIR(69),
- c_ltblue_cyan  = COLOR_PAIR(69) | A_BOLD,
- c_magenta_cyan  = COLOR_PAIR(70),
- c_pink_cyan  = COLOR_PAIR(70) | A_BOLD,
- c_cyan_cyan  = COLOR_PAIR(71),
- c_ltcyan_cyan  = COLOR_PAIR(71) | A_BOLD
+        operator int() const {
+            return attribute_value;
+        }
 
+        // Returns this attribute plus A_BOLD.
+        nc_color bold() const;
+        bool is_bold() const;
+        // Returns this attribute plus A_BLINK.
+        nc_color blink() const;
+        bool is_blink() const;
+
+        void serialize( JsonOut &jsout ) const;
+        void deserialize( JsonIn &jsin );
 };
 
-int color_to_int(nc_color col);
-nc_color int_to_color(int key);
+// Support hashing of nc_color by forwarding the hash of the contained int.
+namespace std
+{
+template<>
+struct hash<nc_color> {
+    std::size_t operator()( const nc_color &v ) const {
+        return hash<int>()( v.operator int() );
+    }
+};
+}
 
-nc_color hilite(nc_color c);
-nc_color invert_color(nc_color c);
-nc_color red_background(nc_color c);
-nc_color white_background(nc_color c);
-nc_color green_background(nc_color c);
-nc_color yellow_background(nc_color c);
-nc_color magenta_background(nc_color c);
-nc_color cyan_background(nc_color c);
-nc_color rand_color();
+class color_manager
+{
+    private:
+        void add_color( const color_id col, const std::string &name,
+                        const nc_color color_pair, const color_id inv_enum );
+        void clear();
+        void finalize(); // Caches colors properly
 
-nc_color color_from_string(std::string color);
-std::string string_from_color(nc_color color);
-nc_color bgcolor_from_string(std::string color);
-nc_color get_color_from_tag(const std::string &s, const nc_color base_color);
+        struct color_struct {
+            nc_color color; // Default color
+            nc_color invert; // Inverted color (not set until finalization)
+            nc_color custom; // Custom color if > 0 (not set until finalization)
+            nc_color invert_custom; // Custom inverted color if > 0 (not set until finalization)
+            std::array<nc_color, NUM_HL> highlight; // Cached highlights (not set until finalization)
 
-void setattr(nc_color &col, col_attribute attr);
-void load_colors(JsonObject &jo);
-void init_colormap();
+            color_id col_id; // Index of this color
+            color_id invert_id; // Index of inversion of this color
+            // String names for custom colors
+            std::string name_custom;
+            std::string name_invert_custom;
+        };
+
+        std::array<color_struct, num_colors> color_array;
+        std::unordered_map<nc_color, color_id> inverted_map;
+        std::unordered_map<std::string, color_id> name_map;
+
+        bool save_custom();
+
+    public:
+        color_manager() {};
+
+        nc_color get( const color_id id ) const;
+
+        nc_color get_invert( const nc_color color ) const;
+        nc_color get_highlight( const nc_color color, const hl_enum bg ) const;
+        nc_color get_random() const;
+
+        color_id color_to_id( const nc_color color ) const;
+        color_id name_to_id( const std::string &name ) const;
+
+        std::string get_name( const nc_color color ) const;
+        std::string id_to_name( const color_id id ) const;
+
+        nc_color name_to_color( const std::string &name ) const;
+
+        nc_color highlight_from_names( const std::string &name, const std::string &bg_name ) const;
+
+        void load_default();
+        void load_custom( const std::string &sPath = "" );
+
+        void show_gui();
+
+        void serialize( JsonOut &json ) const;
+        void deserialize( JsonIn &jsin );
+};
+
+color_manager &get_all_colors();
+
+/**
+ * For color values that are created *before* the color definitions are loaded
+ * from JSON. One can't use the macros (e.g. c_white) directly as they query
+ * the color_manager, which may not be initialized. Instead one has to use
+ * the color_id (e.g. def_c_white) and translate the id to an actual color
+ * later. This is done by this class: it stores the id and translates it
+ * when needed to the color value.
+ */
+class deferred_color
+{
+    private:
+        color_id id;
+    public:
+        deferred_color( const color_id id ) : id( id ) { }
+        operator nc_color() const {
+            return all_colors.get( id );
+        }
+};
+
+struct note_color {
+    nc_color color;
+    std::string name;
+};
+
+extern std::unordered_map<std::string, note_color> color_by_string_map;
+extern std::unordered_map<std::string, note_color> color_shortcuts;
+
+nc_color hilite( nc_color c );
+nc_color invert_color( nc_color c );
+nc_color red_background( nc_color c );
+nc_color white_background( nc_color c );
+nc_color green_background( nc_color c );
+nc_color yellow_background( nc_color c );
+nc_color magenta_background( nc_color c );
+nc_color cyan_background( nc_color c );
+
+nc_color color_from_string( const std::string &color );
+std::string string_from_color( const nc_color color );
+nc_color bgcolor_from_string( const std::string &color );
+nc_color get_color_from_tag( const std::string &s, const nc_color base_color );
+std::string get_tag_from_color( const nc_color color );
+
+nc_color get_note_color( std::string const &note_id );
+std::list<std::pair<std::string, std::string>> get_note_color_names();
 
 #endif
